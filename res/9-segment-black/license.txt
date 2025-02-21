@@ -1,0 +1,9 @@
+﻿The FontStruction “9-segment Black”
+(https://fontstruct.com/fontstructions/show/2404304) by “Petruuccio” is
+licensed under a Creative Commons Attribution license
+(http://creativecommons.org/licenses/by/3.0/).
+“9-segment Black” was originally cloned (copied) from the FontStruction
+“STF_9-SEGMENT LCD (ROUND)”
+(https://fontstruct.com/fontstructions/show/2335413) by “Sed4tives”, which
+is licensed under a Creative Commons Attribution license
+(http://creativecommons.org/licenses/by/3.0/).

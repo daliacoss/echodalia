@@ -1,8 +1,7 @@
 #include "rack.hpp"
 
-using namespace rack;
-
-struct EDModule : Module
+namespace dalia {
+struct Echodalia : rack::Module
 {
   virtual float getInputOrParamVal(int input, int param)
   {
@@ -16,7 +15,7 @@ struct EDModule : Module
                                    bool useDisplayVal = false)
   {
     isInputConnected = false;
-    Input port = getInput(input);
+    rack::Input port = getInput(input);
     if (!port.isConnected()) {
       return useDisplayVal ? getParamQuantity(param)->getDisplayValue()
                            : getParam(param).getValue();
@@ -25,10 +24,10 @@ struct EDModule : Module
     return port.getVoltage();
   }
 
-  virtual simd::float_4 getInputOrParamVal4(int input1st,
-                                            int param1st,
-                                            int& inputConnMask,
-                                            bool useDisplayVal = false)
+  virtual rack::simd::float_4 getInputOrParamVal4(int input1st,
+                                                  int param1st,
+                                                  int& inputConnMask,
+                                                  bool useDisplayVal = false)
   {
     bool is_input_conn = false;
     float raw_vals[4];
@@ -39,6 +38,7 @@ struct EDModule : Module
         inputConnMask = (1 << i) + inputConnMask;
       }
     }
-    return simd::float_4::load(raw_vals);
+    return rack::simd::float_4::load(raw_vals);
   }
 };
+} // namespace dalia

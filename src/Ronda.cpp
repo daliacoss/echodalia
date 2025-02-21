@@ -1,9 +1,14 @@
-#include "plugin.hpp"
 #include <cmath>
+#include <stdexcept>
+#include <string>
+
+#include "Echodalia.hpp"
+#include "plugin.hpp"
+#include "widgets.hpp"
 
 using namespace rack;
 
-struct Ronda : EDModule
+struct Ronda : dalia::Echodalia
 {
 
 protected:
@@ -14,7 +19,7 @@ protected:
 
 public:
   static const int PHASORS_LEN = 4;
-  static constexpr float MAX_FREQ_BASE = 80.f;
+  static constexpr float MAX_FREQ_BASE = 8.f;
   static constexpr float MAX_VOUT = 10.f;
   enum ParamId
   {
@@ -54,6 +59,16 @@ public:
   dsp::BooleanTrigger resetBtnTrigger;
   bool isOutputPoly;
 
+  float getFreqBase()
+  {
+    return getParamQuantity(FREQ_PARAM)->getDisplayValue();
+  }
+
+  float getFreqCV()
+  {
+    return std::pow(2, getInput(FREQ_INPUT).getNormalVoltage(0.f));
+  }
+
   float getFreqMain()
   {
     float f = getParamQuantity(FREQ_PARAM)->getDisplayValue();
@@ -72,19 +87,17 @@ public:
     return phasors[i];
   }
 
-  using EDModule::getInputOrParamVal;
+  using dalia::Echodalia::getInputOrParamVal;
   float getInputOrParamVal(int input,
                            int param,
                            bool& isInputConnected,
                            bool useDisplayVal = false) override
   {
     isInputConnected = false;
-    if (param == RATE1_PARAM || param == SYNC1_PARAM) {
-      return 1.f;
-    } else if (param == PHASE1_PARAM) {
+    if (param == PHASE1_PARAM) {
       return 0.f;
     }
-    return EDModule::getInputOrParamVal(
+    return dalia::Echodalia::getInputOrParamVal(
       input, param, isInputConnected, useDisplayVal);
   }
 
@@ -141,7 +154,6 @@ public:
   {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 
-    /* main params and inputs */
     configSwitch(RUN_PARAM, 0.f, 1.f, 0.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
     configParam(RESET_PARAM, 0.f, 1.f, 0.f, "Reset all phasors");
@@ -149,21 +161,20 @@ public:
     configParam(FREQ_PARAM,
                 0.f,
                 1.f,
-                0.25f,
+                0.5f,
                 "Lead frequency",
                 " Hz",
                 MAX_FREQ_BASE + 1,
                 1.f,
                 -1.f);
-    configInput(FREQ_INPUT, "Lead frequency");
+    configInput(FREQ_INPUT, "Base frequency");
     configLight(RESET_LIGHT, "Resetting");
     configLight(RUN_LIGHT, "Running");
 
     for (int i = 0; i < PHASORS_LEN; i++) {
       std::string phsr_name = "Phasor " + std::to_string(i + 1);
-      /* common params, inputs, and outputs */
       configSwitch(
-        i + SYNC1_PARAM, 0, 1, 0, phsr_name + " sync to 1", { "Off", "On" });
+        i + SYNC1_PARAM, 0, 1, 0, phsr_name + " sync", { "Off", "On" });
       configInput(i + SYNC1_INPUT, phsr_name + " sync");
       configParam(i + PHASE1_PARAM, 0.f, 1.f, 0.f, phsr_name + " phase");
       configInput(i + PHASE1_INPUT, phsr_name + " phase");
@@ -203,7 +214,7 @@ Ronda::process(const ProcessArgs& args)
       phsr_fl[i] = 0.f;
     }
   } else if (run) {
-    double delta = getFreqMain() * args.sampleTime;
+    double delta = getFreqBase() * getFreqCV() * args.sampleTime;
     double ratio = 1;
     float ratio_fl = 1.f;
     bool is_connected;
@@ -270,7 +281,7 @@ Ronda::dataFromJson(json_t* root)
 
 struct RondaWidget : ModuleWidget
 {
-
+public:
   static constexpr float XG = 2.54;
   static constexpr float YG = 2.141666667;
 
@@ -280,59 +291,73 @@ struct RondaWidget : ModuleWidget
     float x;
 
     setModule(ronda);
-    setPanel(createPanel(asset::plugin(pluginInstance, "res/Ronda.svg")));
+    setPanel(createPanel(asset::plugin(pluginInstance, "res/Ronda2.svg")));
 
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, YG))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 1.1 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 59 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
 
+    dalia::FloatSegmentDisplay* sd =
+      createWidget<dalia::FloatSegmentDisplay>(mm2px(Vec(31.750, 8 * YG)));
+    sd->getValue = [=]() { return ronda->getFreqBase(); };
+    sd->length = 6;
+    addChild(sd);
+
     for (i = 0, x = 3 * XG; i < Ronda::PHASORS_LEN; i++, x += 6 * XG) {
-      /* common params, inputs, and outputs */
+      /* all columns */
       addOutput(createOutputCentered<DarkPJ301MPort>(
         mm2px(Vec(x, 55.5 * YG)), ronda, Ronda::PHSR1_OUTPUT + i));
-      /* subphasor-only params */
+      addParam(createParamCentered<dalia::CKSSHorizontal>(
+        mm2px(Vec(x, 44 * YG)), ronda, Ronda::SYNC1_PARAM + i));
+      addInput(createInputCentered<PJ301MPort>(
+        mm2px(Vec(x, 48 * YG)), ronda, Ronda::SYNC1_INPUT + i));
+      /* last 3 columns */
       if (i) {
+        if (i == 1) {
+          addParam(createParamCentered<RoundBlackKnob>(
+            mm2px(Vec(x, 7 * YG)), ronda, Ronda::FREQ_PARAM));
+        }
         addParam(createParamCentered<RoundBlackKnob>(
-          mm2px(Vec(x, 15 * YG)), ronda, Ronda::RATE1_PARAM + i));
+          mm2px(Vec(x, 19 * YG)), ronda, Ronda::RATE1_PARAM + i));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 20 * YG)), ronda, Ronda::RATE1_INPUT + i));
-        addParam(createParamCentered<CKSSHorizontal>(
-          mm2px(Vec(x, 29 * YG)), ronda, Ronda::SYNC1_PARAM + i));
-        addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 34 * YG)), ronda, Ronda::SYNC1_INPUT + i));
+          mm2px(Vec(x, 24 * YG)), ronda, Ronda::RATE1_INPUT + i));
         addParam(createParamCentered<RoundBlackKnob>(
-          mm2px(Vec(x, 43 * YG)), ronda, Ronda::PHASE1_PARAM + i));
+          mm2px(Vec(x, 32 * YG)), ronda, Ronda::PHASE1_PARAM + i));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 48 * YG)), ronda, Ronda::PHASE1_INPUT + i));
+          mm2px(Vec(x, 37 * YG)), ronda, Ronda::PHASE1_INPUT + i));
       }
-      /* main-only params and inputs*/
+      /* 1st column */
       else {
-        ParamWidget *pw = createParamCentered<VCVSlider>(
-          mm2px(Vec(0,0)), ronda, Ronda::FREQ_PARAM);
-        TransformWidget* tw = new TransformWidget;
-        // tw->rotate(0.001);
-        tw->setPosition(mm2px(Vec(x, 11 * YG)));
-        tw->addChild(pw);
-        addChild(tw);
-        // addParam(createParamCentered<VCVSlider>(
-          // mm2px(Vec(x, 11 * YG)), ronda, Ronda::FREQ_PARAM));
+        addParam(
+          createLightParamCentered<
+            VCVLightButton<SmallSimpleLight<WhiteLight>>>(mm2px(Vec(x, 3 * YG)),
+                                                          ronda,
+                                                          Ronda::RESET_PARAM,
+                                                          Ronda::RESET_LIGHT));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 20 * YG)), ronda, Ronda::FREQ_INPUT));
-        addParam(createLightParamCentered<VCVLightButton<SmallSimpleLight<WhiteLight>>>(
-          mm2px(Vec(x, 29 * YG)),
-          ronda,
-          Ronda::RESET_PARAM,
-          Ronda::RESET_LIGHT));
+          mm2px(Vec(x, 7 * YG)), ronda, Ronda::RESET_INPUT));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 34 * YG)), ronda, Ronda::RESET_INPUT));
-        addParam(createParamCentered<CKSS>(
-          mm2px(Vec(x, 43 * YG)), ronda, Ronda::RUN_PARAM));
+          mm2px(Vec(x, 14 * YG)), ronda, Ronda::FREQ_INPUT));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 48 * YG)), ronda, Ronda::RUN_INPUT));
+          mm2px(Vec(x, 21 * YG)), ronda, Ronda::RUN_INPUT));
+        addParam(createParamCentered<RoundBlackKnob>(
+          mm2px(Vec(x, 32 * YG)), ronda, Ronda::RATE1_PARAM));
+        addInput(createInputCentered<PJ301MPort>(
+          mm2px(Vec(x, 37 * YG)), ronda, Ronda::RATE1_INPUT));
       }
     }
   }
+
+  // void draw(const DrawArgs& args) override
+  // {
+  // Ronda* ronda = getModule<Ronda>();
+  // float f = ronda->getFreqBase();
+  // if (f < freqBase || f > freqBase) {
+  // freqBase = f;
+  // }
+  // ModuleWidget::draw(args);
+  // }
 
   void appendContextMenu(Menu* menu) override
   {
