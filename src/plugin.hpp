@@ -8,3 +8,4 @@ extern rack::Plugin* pluginInstance;
 
 // Declare each Model, defined in each module source file
 extern rack::Model* modelRonda;
+extern rack::Model* modelJab;
