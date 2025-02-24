@@ -1,0 +1,23 @@
+{
+  "slug": "Echodalia",
+  "name": "Echodalia",
+  "version": "2.0.0",
+  "license": "GPL-3.0-only",
+  "brand": "Echodalia",
+  "author": "Dalia Coss",
+  "authorEmail": "dc@dalia.cc",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Ronda",
+      "name": "Ronda",
+      "description": "Generate 4 phasors (ramp LFO's) at different frequency ratios, with optional sync and phase offsets",
+      "tags": []
+    }
+  ]
+}
