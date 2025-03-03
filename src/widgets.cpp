@@ -54,7 +54,9 @@ FloatSegmentDisplay::draw(const DrawArgs& args)
   if (value != prevValue) {
     prevValue = value;
 
-    displayWidget->text = getText();
+    if (displayWidget) {
+      displayWidget->text = getText();
+    }
     // fb->setDirty();
   }
   rack::Widget::draw(args);
