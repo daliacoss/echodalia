@@ -1,11 +1,10 @@
 #include <cmath>
+#include <functional>
 #include <iomanip>
-// #include <iostream>
 #include <sstream>
 
 #include "plugin.hpp"
 #include "rack.hpp"
-#include <functional>
 
 namespace dalia {
 struct CKSSHorizontal : rack::app::SvgSwitch
@@ -47,7 +46,7 @@ private:
 public:
   std::function<float()> getValue;
   int length = 6; // including the decimal point
-  rack::FramebufferWidget* fb;
+  // rack::FramebufferWidget* fb;
   CharacterDisplay* displayWidget;
 
   FloatSegmentDisplay()

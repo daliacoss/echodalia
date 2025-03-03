@@ -48,8 +48,6 @@ public:
   };
   enum LightId
   {
-    RUN_LIGHT,
-    RESET_LIGHT,
     LIGHTS_LEN
   };
   dsp::ClockDivider lightDivider;
@@ -168,8 +166,6 @@ public:
                 1.f,
                 -1.f);
     configInput(FREQ_INPUT, "Base frequency");
-    configLight(RESET_LIGHT, "Resetting");
-    configLight(RUN_LIGHT, "Running");
 
     for (int i = 0; i < PHASORS_LEN; i++) {
       std::string phsr_name = "Phasor " + std::to_string(i + 1);
@@ -246,7 +242,6 @@ Ronda::process(const ProcessArgs& args)
     }
   }
 
-  getLight(RESET_LIGHT).setBrightnessSmooth(reset, args.sampleTime);
   phsr_simd = simd::float_4::load(phsr_fl);
   phsr_simd = simd::fmod(phsr_simd + getPhase(), 1.f) * MAX_VOUT;
 
@@ -329,12 +324,8 @@ public:
       }
       /* 1st column */
       else {
-        addParam(
-          createLightParamCentered<
-            VCVLightButton<SmallSimpleLight<WhiteLight>>>(mm2px(Vec(x, 3 * YG)),
-                                                          ronda,
-                                                          Ronda::RESET_PARAM,
-                                                          Ronda::RESET_LIGHT));
+        addParam(createParamCentered<VCVButton>(
+          mm2px(Vec(x, 3 * YG)), ronda, Ronda::RESET_PARAM));
         addInput(createInputCentered<PJ301MPort>(
           mm2px(Vec(x, 7 * YG)), ronda, Ronda::RESET_INPUT));
         addInput(createInputCentered<PJ301MPort>(
