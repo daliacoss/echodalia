@@ -18,6 +18,12 @@
       "name": "Ronda",
       "description": "Generate 4 phasors (ramp LFO's) at different frequency ratios, with optional sync and phase offsets",
       "tags": []
+    },
+    {
+      "slug": "Jab",
+      "name": "Jab",
+      "description": "Just Another Button",
+      "tags": []
     }
   ]
 }
