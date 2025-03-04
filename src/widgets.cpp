@@ -5,7 +5,6 @@ void
 CharacterDisplay::drawLayer(const DrawArgs& args, int layer)
 {
   if (layer == 1) {
-    // std::cout << "drawing CharacterDisplay\n";
     std::shared_ptr<rack::Font> font = APP->window->loadFont(fontPath);
     if (font) {
       nvgFontFaceId(args.vg, font->handle);
@@ -25,35 +24,37 @@ CharacterDisplay::drawLayer(const DrawArgs& args, int layer)
 }
 
 std::string
-FloatSegmentDisplay::getText()
+ParamSegmentDisplay::getText()
 {
   std::stringstream text;
   if (length <= 0) {
     return text.str();
   }
-  float value = std::abs(getValue());
-  int lg10 = std::log10(value);
+  float _value = std::abs(value);
+  int lg10 = std::log10(_value);
   int precision = length - 2;
   if (lg10 >= length) {
-    value = (int)value % (int)std::pow(10, length);
-    lg10 = std::log10(value);
+    _value = (int)_value % (int)std::pow(10, length);
+    lg10 = std::log10(_value);
   }
   if (lg10 > 0) {
     precision = std::max(precision - lg10, 0);
   }
 
   text << std::fixed << std::setw(length - 2) << std::setprecision(precision)
-       << value;
+       << _value;
   return text.str();
 }
 
 void
-FloatSegmentDisplay::draw(const DrawArgs& args)
+ParamSegmentDisplay::draw(const DrawArgs& args)
 {
-  float value = getValue(); // std::abs(getValue());
-  if (value != prevValue) {
-    prevValue = value;
-
+  float newValue = value;
+  if (rackModule) {
+    newValue = rackModule->getParamQuantity(paramId)->getDisplayValue();
+  }
+  if (newValue != value) {
+    value = newValue;
     if (displayWidget) {
       displayWidget->text = getText();
     }

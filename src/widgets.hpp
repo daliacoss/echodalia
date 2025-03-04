@@ -21,8 +21,8 @@ struct CKSSHorizontal : rack::app::SvgSwitch
 
 struct CharacterDisplay : rack::Widget
 {
-private:
-  float prevValue = 0.f;
+protected:
+  float value = 0.f;
 
 public:
   std::string fontPath;
@@ -38,18 +38,21 @@ public:
   void drawLayer(const DrawArgs& args, int layer) override;
 };
 
-struct FloatSegmentDisplay : rack::Widget
+struct ParamSegmentDisplay : rack::Widget
 {
 private:
   float prevValue;
 
 public:
-  std::function<float()> getValue;
+  // std::function<float()> getValue = [=]() { return 0; };
+  float value = 0;
+  rack::Module *rackModule = nullptr;
+  int paramId = 0;
   int length = 6; // including the decimal point
   // rack::FramebufferWidget* fb;
-  CharacterDisplay* displayWidget;
+  CharacterDisplay* displayWidget = nullptr;
 
-  FloatSegmentDisplay()
+  ParamSegmentDisplay()
   {
     // fb = new rack::FramebufferWidget;
     // addChild(fb);

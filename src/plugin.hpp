@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rack.hpp"
+#include "iostream"
 
 // Declare the Plugin, defined in plugin.cpp
 extern rack::Plugin* pluginInstance;

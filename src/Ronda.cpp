@@ -59,7 +59,12 @@ public:
 
   float getFreqBase()
   {
-    return getParamQuantity(FREQ_PARAM)->getDisplayValue();
+    ParamQuantity* pq = getParamQuantity(FREQ_PARAM);
+    if (pq) {
+      return pq->getDisplayValue();
+    } else {
+      return 0;
+    }
   }
 
   float getFreqCV()
@@ -293,9 +298,10 @@ public:
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 59 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
 
-    dalia::FloatSegmentDisplay* sd =
-      createWidget<dalia::FloatSegmentDisplay>(mm2px(Vec(31.750, 8 * YG)));
-    sd->getValue = [=]() { return ronda->getFreqBase(); };
+    dalia::ParamSegmentDisplay* sd =
+      createWidget<dalia::ParamSegmentDisplay>(mm2px(Vec(31.750, 8 * YG)));
+    sd->rackModule = ronda;
+    sd->paramId = Ronda::FREQ_PARAM;
     sd->length = 6;
     addChild(sd);
 

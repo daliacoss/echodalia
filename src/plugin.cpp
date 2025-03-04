@@ -1,5 +1,4 @@
 #include "plugin.hpp"
-#include "iostream"
 
 rack::Plugin* pluginInstance;
 
