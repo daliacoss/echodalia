@@ -22,7 +22,7 @@
     {
       "slug": "Jab",
       "name": "Jab",
-      "description": "Just Another Button",
+      "description": "A gate-to-trigger, gate-to-latch, and gate-to-trigger converter with a momentary pushbutton",
       "tags": []
     }
   ]
