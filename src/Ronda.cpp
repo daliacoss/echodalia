@@ -23,7 +23,7 @@ public:
   static constexpr float MAX_VOUT = 10.f;
   enum ParamId
   {
-    RUN_PARAM,
+    // RUN_PARAM,
     RESET_PARAM,
     FREQ_PARAM,
     RATE1_PARAM,
@@ -143,7 +143,8 @@ public:
 
   bool isRunning()
   {
-    runTrigger.process(getInputOrParamVal(RUN_INPUT, RUN_PARAM), 0.1f, 1.f);
+    // runTrigger.process(getInputOrParamVal(RUN_INPUT, RUN_PARAM), 0.1f, 1.f);
+    runTrigger.process(getInput(RUN_INPUT).getNormalVoltage(1.0), 0.1, 1.0);
     return runTrigger.isHigh();
   }
 
@@ -157,7 +158,7 @@ public:
   {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 
-    configSwitch(RUN_PARAM, 0.f, 1.f, 0.0f, "Run", { "Off", "On" });
+    // configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
     configParam(RESET_PARAM, 0.f, 1.f, 0.f, "Reset all phasors");
     configInput(RESET_INPUT, "Reset all phasors");
