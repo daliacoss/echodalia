@@ -132,7 +132,7 @@ public:
   simd::float_4 isSync()
   {
     simd::float_4 sync_params = {
-      1.f,
+      getInputOrParamVal(SYNC1_INPUT, SYNC1_PARAM),
       getInputOrParamVal(SYNC1_INPUT + 1, SYNC1_PARAM + 1),
       getInputOrParamVal(SYNC1_INPUT + 2, SYNC1_PARAM + 2),
       getInputOrParamVal(SYNC1_INPUT + 3, SYNC1_PARAM + 3)
