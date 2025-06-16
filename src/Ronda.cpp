@@ -97,11 +97,14 @@ public:
                            bool useDisplayVal = false) override
   {
     isInputConnected = false;
+    float v;
     if (param == PHASE1_PARAM) {
-      return 0.f;
+      v = 0.f;
+    } else {
+      v = dalia::Echodalia::getInputOrParamVal(
+        input, param, isInputConnected, useDisplayVal);
     }
-    return dalia::Echodalia::getInputOrParamVal(
-      input, param, isInputConnected, useDisplayVal);
+    return v;
   }
 
   simd::float_4 getFreqRatio()

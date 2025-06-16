@@ -33,7 +33,7 @@ struct Echodalia : rack::Module
     float raw_vals[4];
     for (int i = 0; i < 4; i++) {
       raw_vals[i] = getInputOrParamVal(
-        input1st + i, input1st + i, is_input_conn, useDisplayVal);
+        input1st + i, param1st + i, is_input_conn, useDisplayVal);
       if (is_input_conn) {
         inputConnMask = (1 << i) + inputConnMask;
       }
