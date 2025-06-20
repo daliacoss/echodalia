@@ -295,7 +295,7 @@ public:
     float x;
 
     setModule(ronda);
-    setPanel(createPanel(asset::plugin(pluginInstance, "res/Ronda2.svg")));
+    setPanel(createPanel(asset::plugin(pluginInstance, "res/Ronda.svg")));
 
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 1.1 * YG))));
