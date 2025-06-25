@@ -12,7 +12,6 @@ struct Ronda : dalia::Echodalia
 {
 
 protected:
-  double leader;
   /* phasors before phase offset is applied */
   double phasors[4];
   // dsp::ClockDivider debugDivider;
@@ -28,23 +27,24 @@ public:
     FREQ_PARAM,
     RATE1_PARAM,
     PHASE1_PARAM = RATE1_PARAM + PHASORS_LEN,
-    SYNC1_PARAM = PHASE1_PARAM + PHASORS_LEN,
-    PARAMS_LEN = SYNC1_PARAM + PHASORS_LEN
+    // SYNC1_PARAM = PHASE1_PARAM + PHASORS_LEN,
+    PARAMS_LEN = PHASE1_PARAM + PHASORS_LEN
   };
   enum InputId
   {
     RUN_INPUT,
     RESET_INPUT,
     FREQ_INPUT,
-    RATE1_INPUT,
-    PHASE1_INPUT = RATE1_INPUT + PHASORS_LEN,
-    SYNC1_INPUT = PHASE1_INPUT + PHASORS_LEN,
+    // RATE1_INPUT,
+    // PHASE1_INPUT = RATE1_INPUT + PHASORS_LEN,
+    SYNC1_INPUT,
     INPUTS_LEN = SYNC1_INPUT + PHASORS_LEN
   };
   enum OutputId
   {
     PHSR1_OUTPUT,
-    OUTPUTS_LEN = PHASORS_LEN
+    CLK1_OUTPUT = PHSR1_OUTPUT + PHASORS_LEN,
+    OUTPUTS_LEN = CLK1_OUTPUT + PHASORS_LEN
   };
   enum LightId
   {
@@ -53,8 +53,8 @@ public:
   dsp::ClockDivider lightDivider;
   dsp::SchmittTrigger runTrigger;
   dsp::SchmittTrigger resetTrigger;
-  dsp::TSchmittTrigger<simd::float_4> syncTrigger;
-  dsp::BooleanTrigger resetBtnTrigger;
+  dsp::SchmittTrigger syncTriggers[PHASORS_LEN];
+  dsp::PulseGenerator clockPulses[PHASORS_LEN];
   bool isOutputPoly;
 
   float getFreqBase()
@@ -80,8 +80,6 @@ public:
     return freq;
   }
 
-  double getLeader() { return leader; }
-
   double getPhasor(int i, bool safe = true)
   {
     if (safe && i >= PHASORS_LEN) {
@@ -90,59 +88,41 @@ public:
     return phasors[i];
   }
 
-  using dalia::Echodalia::getInputOrParamVal;
-  float getInputOrParamVal(int input,
-                           int param,
-                           bool& isInputConnected,
-                           bool useDisplayVal = false) override
-  {
-    isInputConnected = false;
-    float v;
-    if (param == PHASE1_PARAM) {
-      v = 0.f;
-    } else {
-      v = dalia::Echodalia::getInputOrParamVal(
-        input, param, isInputConnected, useDisplayVal);
-    }
-    return v;
-  }
-
   simd::float_4 getFreqRatio()
   {
-    int input_conn_mask = 0;
-    simd::float_4 ratio =
-      getInputOrParamVal4(RATE1_INPUT, RATE1_PARAM, input_conn_mask, true);
+    // int input_conn_mask = 0;
+    simd::float_4 ratio = getParamVal4(RATE1_PARAM, true);
     /* convert control voltages to ratios */
-    ratio = ifelse(
-      simd::movemaskInverse<simd::float_4>(input_conn_mask),
-      // simd::clamp(simd::pow(32, simd::rescale(ratio, -5, 5, -1, 1)), -1, 1),
-      simd::pow(32, simd::clamp(simd::rescale(ratio, -5, 5, -1, 1), -1, 1)),
-      ratio);
+    // ratio = ifelse(
+    //   simd::movemaskInverse<simd::float_4>(input_conn_mask),
+    //   simd::pow(32, simd::clamp(simd::rescale(ratio, -5, 5, -1, 1), -1, 1)),
+    //   ratio);
     return ratio;
   }
 
   simd::float_4 getPhase()
   {
-    int input_conn_mask = 0;
+    // int input_conn_mask = 0;
     simd::float_4 phase =
-      getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, input_conn_mask, true);
-    phase = ifelse(simd::movemaskInverse<simd::float_4>(input_conn_mask),
-                   simd::clamp(simd::rescale(phase, 0.f, 10.f, 0.f, 1.f)),
-                   phase);
+      // getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, input_conn_mask, true);
+      getParamVal4(PHASE1_PARAM, true);
+    // phase = ifelse(simd::movemaskInverse<simd::float_4>(input_conn_mask),
+    //             simd::clamp(simd::rescale(phase, 0.f, 10.f, 0.f, 1.f)),
+    //             phase);
     return phase;
   }
 
-  simd::float_4 isSync()
-  {
-    simd::float_4 sync_params = {
-      getInputOrParamVal(SYNC1_INPUT, SYNC1_PARAM),
-      getInputOrParamVal(SYNC1_INPUT + 1, SYNC1_PARAM + 1),
-      getInputOrParamVal(SYNC1_INPUT + 2, SYNC1_PARAM + 2),
-      getInputOrParamVal(SYNC1_INPUT + 3, SYNC1_PARAM + 3)
-    };
-    syncTrigger.process(sync_params, 0.1f, 1.f);
-    return syncTrigger.isHigh();
-  }
+  // simd::float_4 isSync()
+  // {
+  //   simd::float_4 sync_params = {
+  //     getInput(SYNC1_INPUT).getVoltage(),
+  //     getInput(SYNC1_INPUT + 1).getVoltage(),
+  //     getInput(SYNC1_INPUT + 2).getVoltage(),
+  //     getInput(SYNC1_INPUT + 3).getVoltage(),
+  //   };
+  //   return syncTrigger.processEvent(sync_params, 0.1f, 1.f) ==
+  //          dsp::SchmittTrigger::TRIGGERED;
+  // }
 
   bool isRunning()
   {
@@ -163,26 +143,23 @@ public:
 
     // configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
-    configParam(RESET_PARAM, 0.f, 1.f, 0.f, "Reset all phasors");
-    configInput(RESET_INPUT, "Reset all phasors");
+    configParam(RESET_PARAM, 0.f, 1.f, 0.f, "Sync all phasors");
+    configInput(RESET_INPUT, "Sync all phasors");
     configParam(FREQ_PARAM,
                 0.f,
                 1.f,
                 0.5f,
-                "Lead frequency",
+                "Base frequency",
                 " Hz",
                 MAX_FREQ_BASE + 1,
                 1.f,
                 -1.f);
-    configInput(FREQ_INPUT, "Base frequency");
+    configInput(FREQ_INPUT, "Base frequency modifier");
 
     for (int i = 0; i < PHASORS_LEN; i++) {
       std::string phsr_name = "Phasor " + std::to_string(i + 1);
-      configSwitch(
-        i + SYNC1_PARAM, 0, 1, 0, phsr_name + " sync", { "Off", "On" });
       configInput(i + SYNC1_INPUT, phsr_name + " sync");
       configParam(i + PHASE1_PARAM, 0.f, 1.f, 0.f, phsr_name + " phase");
-      configInput(i + PHASE1_INPUT, phsr_name + " phase");
       configParam(i + RATE1_PARAM,
                   -1.f,
                   1.f,
@@ -192,16 +169,17 @@ public:
                   32.f,
                   1.f,
                   0.f);
-      configInput(i + RATE1_INPUT, phsr_name + " rate");
+      // configInput(i + RATE1_INPUT, phsr_name + " rate");
       configOutput(PHSR1_OUTPUT + i, phsr_name);
+      configOutput(CLK1_OUTPUT + i, phsr_name + " clock");
     }
 
     // debugDivider.setDivision(48000);
   }
 
   void process(const ProcessArgs& args) override;
-  json_t* dataToJson() override;
-  void dataFromJson(json_t* root) override;
+  // json_t* dataToJson() override;
+  // void dataFromJson(json_t* root) override;
 };
 
 void
@@ -210,39 +188,33 @@ Ronda::process(const ProcessArgs& args)
   bool run = isRunning();
   bool reset = isResetting();
   float phsr_fl[4];
-  simd::float_4 phsr_simd = 0;
 
   if (reset) {
-    leader = 0;
     for (int i = 0; i < PHASORS_LEN; i++) {
       phasors[i] = 0;
       phsr_fl[i] = 0.f;
+      clockPulses[i].trigger();
     }
   } else if (run) {
     double delta = getFreqBase() * getFreqCV() * args.sampleTime;
     double ratio = 1;
-    float ratio_fl = 1.f;
-    bool is_connected;
-    int is_sync = simd::movemask(isSync());
-    leader = std::fmod(leader + delta, 1);
-    for (int i = 0; i < PHASORS_LEN; i++, is_sync >>= 1) {
-      ratio_fl = getInputOrParamVal(
-        RATE1_INPUT + i, RATE1_PARAM + i, is_connected, true);
+    bool is_sync;
+    for (int i = 0; i < PHASORS_LEN; i++) {
+      is_sync = syncTriggers[i].processEvent(
+                  getInput(SYNC1_INPUT + i).getVoltage(), 0.1f, 1.0f) ==
+                dsp::SchmittTrigger::TRIGGERED;
 
-      if (is_connected) {
-        ratio = std::pow(32,
-                         (double)math::clamp(
-                           math::rescale(ratio_fl, -5, 5, -1, 1), -1.f, 1.f));
+      if (is_sync) {
+        phasors[i] = 0;
+        clockPulses[i].trigger();
       } else {
-        ratio = (double)ratio_fl;
-      }
-
-      if (is_sync % 2) {
-        phasors[i] = leader * ratio;
-      } else {
+        ratio = (double)getParamQuantity(RATE1_PARAM + i)->getDisplayValue();
         phasors[i] += delta * ratio;
+        if (phasors[i] >= 1.0) {
+          phasors[i] = std::fmod(phasors[i], 1.0);
+          clockPulses[i].trigger();
+        }
       }
-
       phsr_fl[i] = (float)phasors[i];
     }
   } else {
@@ -251,35 +223,13 @@ Ronda::process(const ProcessArgs& args)
     }
   }
 
-  phsr_simd = simd::float_4::load(phsr_fl);
+  simd::float_4 phsr_simd = simd::float_4::load(phsr_fl);
   phsr_simd = simd::fmod(phsr_simd + getPhase(), 1.f) * MAX_VOUT;
-
-  if (isOutputPoly) {
-    getOutput(PHSR1_OUTPUT).setChannels(PHASORS_LEN);
-    getOutput(PHSR1_OUTPUT).setVoltageSimd(phsr_simd, 0);
-  } else {
-    phsr_simd.store(phsr_fl);
-    getOutput(PHSR1_OUTPUT).setChannels(1);
-    for (int i = 0; i < OUTPUTS_LEN; i++) {
-      getOutput(PHSR1_OUTPUT + i).setVoltage(phsr_fl[i]);
-    }
-  }
-}
-
-json_t*
-Ronda::dataToJson()
-{
-  json_t* root = json_object();
-  json_object_set_new(root, "isOutputPoly", json_boolean(isOutputPoly));
-  return root;
-}
-
-void
-Ronda::dataFromJson(json_t* root)
-{
-  json_t* val = json_object_get(root, "isOutputPoly");
-  if (val) {
-    isOutputPoly = json_boolean_value(val);
+  phsr_simd.store(phsr_fl);
+  for (int i = 0; i < PHASORS_LEN; i++) {
+    clockPulses[i].process(args.sampleTime);
+    getOutput(PHSR1_OUTPUT + i).setVoltage(phsr_fl[i]);
+    getOutput(CLK1_OUTPUT + i).setVoltage(clockPulses[i].isHigh() * 10.f);
   }
 }
 
@@ -303,69 +253,43 @@ public:
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
 
     dalia::ParamSegmentDisplay* sd =
-      createWidget<dalia::ParamSegmentDisplay>(mm2px(Vec(31.750, 8 * YG)));
+      createWidget<dalia::ParamSegmentDisplay>(
+        mm2px(Vec(20.2 , 17 * YG)));
     sd->rackModule = ronda;
     sd->paramId = Ronda::FREQ_PARAM;
     sd->length = 6;
     addChild(sd);
 
+    addParam(createParamCentered<RoundLargeBlackKnob>(
+      mm2px(Vec(12 * XG, 10 * YG)), ronda, Ronda::FREQ_PARAM));
+
     for (i = 0, x = 3 * XG; i < Ronda::PHASORS_LEN; i++, x += 6 * XG) {
       /* all columns */
-      addOutput(createOutputCentered<DarkPJ301MPort>(
-        mm2px(Vec(x, 55.5 * YG)), ronda, Ronda::PHSR1_OUTPUT + i));
-      addParam(createParamCentered<dalia::CKSSHorizontal>(
-        mm2px(Vec(x, 44 * YG)), ronda, Ronda::SYNC1_PARAM + i));
+      addParam(createParamCentered<RoundBlackKnob>(
+        mm2px(Vec(x, 24 * YG)), ronda, Ronda::RATE1_PARAM + i));
+      addParam(createParamCentered<RoundBlackKnob>(
+        mm2px(Vec(x, 32 * YG)), ronda, Ronda::PHASE1_PARAM + i));
       addInput(createInputCentered<PJ301MPort>(
-        mm2px(Vec(x, 48 * YG)), ronda, Ronda::SYNC1_INPUT + i));
-      /* last 3 columns */
-      if (i) {
-        if (i == 1) {
-          addParam(createParamCentered<RoundBlackKnob>(
-            mm2px(Vec(x, 7 * YG)), ronda, Ronda::FREQ_PARAM));
-        }
-        addParam(createParamCentered<RoundBlackKnob>(
-          mm2px(Vec(x, 19 * YG)), ronda, Ronda::RATE1_PARAM + i));
-        addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 24 * YG)), ronda, Ronda::RATE1_INPUT + i));
-        addParam(createParamCentered<RoundBlackKnob>(
-          mm2px(Vec(x, 32 * YG)), ronda, Ronda::PHASE1_PARAM + i));
-        addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 37 * YG)), ronda, Ronda::PHASE1_INPUT + i));
-      }
-      /* 1st column */
-      else {
+        mm2px(Vec(x, 40 * YG)), ronda, Ronda::SYNC1_INPUT + i));
+      addOutput(createOutputCentered<PJ301MPort>(
+        mm2px(Vec(x, 48 * YG)), ronda, Ronda::PHSR1_OUTPUT + i));
+      addOutput(createOutputCentered<PJ301MPort>(
+        mm2px(Vec(x, 55 * YG)), ronda, Ronda::CLK1_OUTPUT + i));
+      /* last column only */
+      if (i == Ronda::PHASORS_LEN - 1) {
         addParam(createParamCentered<VCVButton>(
           mm2px(Vec(x, 3 * YG)), ronda, Ronda::RESET_PARAM));
         addInput(createInputCentered<PJ301MPort>(
           mm2px(Vec(x, 7 * YG)), ronda, Ronda::RESET_INPUT));
+      }
+      /* 1st column only */
+      else if (!i) {
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 14 * YG)), ronda, Ronda::FREQ_INPUT));
+          mm2px(Vec(x, 7 * YG)), ronda, Ronda::RUN_INPUT));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 21 * YG)), ronda, Ronda::RUN_INPUT));
-        addParam(createParamCentered<RoundBlackKnob>(
-          mm2px(Vec(x, 32 * YG)), ronda, Ronda::RATE1_PARAM));
-        addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 37 * YG)), ronda, Ronda::RATE1_INPUT));
+          mm2px(Vec(x, 15 * YG)), ronda, Ronda::FREQ_INPUT));
       }
     }
-  }
-
-  // void draw(const DrawArgs& args) override
-  // {
-  // Ronda* ronda = getModule<Ronda>();
-  // float f = ronda->getFreqBase();
-  // if (f < freqBase || f > freqBase) {
-  // freqBase = f;
-  // }
-  // ModuleWidget::draw(args);
-  // }
-
-  void appendContextMenu(Menu* menu) override
-  {
-    Ronda* ronda = getModule<Ronda>();
-    menu->addChild(new MenuSeparator);
-    menu->addChild(
-      createBoolPtrMenuItem("Polyphonic output", "", &ronda->isOutputPoly));
   }
 };
 

@@ -24,6 +24,20 @@ struct Echodalia : rack::Module
     return port.getVoltage();
   }
 
+  virtual rack::simd::float_4 getParamVal4(int param1st,
+                                           bool useDisplayVal = false)
+  {
+    float raw_vals[4];
+    for (int i = 0; i < 4; i++) {
+      if (useDisplayVal) {
+        raw_vals[i] = getParamQuantity(param1st + i)->getDisplayValue();
+      } else {
+        raw_vals[i] = getParam(param1st + i).getValue();
+      }
+    }
+    return rack::simd::float_4::load(raw_vals);
+  }
+
   virtual rack::simd::float_4 getInputOrParamVal4(int input1st,
                                                   int param1st,
                                                   int& inputConnMask,
