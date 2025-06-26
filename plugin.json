@@ -17,13 +17,13 @@
       "slug": "Ronda",
       "name": "Ronda",
       "description": "Generate 4 phasors (ramp LFO's) at different frequency ratios, with optional sync and phase offsets",
-      "tags": []
+      "tags": ["Low-frequency oscillator", "Quad"]
     },
     {
       "slug": "Jab",
       "name": "Jab",
-      "description": "A gate-to-trigger, gate-to-latch, and gate-to-trigger converter with a momentary pushbutton",
-      "tags": []
+      "description": "A gate-to-trigger and gate-to-latch converter with a momentary pushbutton",
+      "tags": ["Utility"]
     }
   ]
 }
