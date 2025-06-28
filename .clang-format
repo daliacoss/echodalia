@@ -20,3 +20,4 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: true
 BreakBeforeBraces: Custom
+ColumnLimit: 80

@@ -1,22 +1,31 @@
 #include "Echodalia.hpp"
 #include "plugin.hpp"
+#include <string>
 
 using namespace rack;
 
 struct Jab : dalia::Echodalia
 {
 protected:
-  dsp::SchmittTrigger inputTrigger;
-  dsp::BooleanTrigger buttonTrigger;
-  dsp::BooleanTrigger combinedGateTrigger;
-  dsp::PulseGenerator gateStartPulse;
-  dsp::PulseGenerator gateEndPulse;
+  // dsp::SchmittTrigger inputTrigger;
+  dsp::TSchmittTrigger<simd::float_4> inputTriggers[4];
+  // unsigned int gateState[16] = { 0 };
+  // unsigned int lastGateState[16] = { 0 };
+  simd::float_4 lastGates[4];
+  simd::float_4 latches[4];
+  simd::float_4 gateStartPulses[4];
+  simd::float_4 gateEndPulses[4];
+  dsp::BooleanTrigger resetButtonTrigger;
+  // dsp::BooleanTrigger combinedGateTrigger;
+  // dsp::PulseGenerator gateStartPulse;
+  // dsp::PulseGenerator gateEndPulse;
   dsp::ClockDivider lightDivider;
 
 public:
   enum ParamId
   {
     GATE_PARAM,
+    RESET_PARAM,
     PARAMS_LEN
   };
   enum InputId
@@ -32,7 +41,7 @@ public:
     NOT_LATCH_OUTPUT,
     START_OUTPUT,
     END_OUTPUT,
-    START_OR_END_OUTPUT,
+    // START_OR_END_OUTPUT,
     OUTPUTS_LEN
   };
   enum LightId
@@ -43,7 +52,7 @@ public:
     NOT_LATCH_LIGHT,
     START_LIGHT,
     END_LIGHT,
-    START_OR_END_LIGHT,
+    // START_OR_END_LIGHT,
     LIGHTS_LEN
   };
   enum GateSource
@@ -55,17 +64,19 @@ public:
     BUTTON_OR_INPUT
   };
 
-  float highVoltageOut = 10.f;
-  float lowVoltageOut = 0.f;
+  simd::float_4 highVoltageOut = { 10, 10, 10, 10 };
+  simd::float_4 lowVoltageOut = FLOAT_4_ZERO;
   float pulseLength = 0.001f;
-  bool isLatchHigh = false;
-  int gateSource = INPUT_IF_CONNECTED_ELSE_BUTTON;
+  // bool isLatchHigh = false;
+  GateSource gateSource = INPUT_IF_CONNECTED_ELSE_BUTTON;
   float lightFadeoutLambda = 10.f;
+  int numChannels = 0;
 
   Jab()
   {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
     configSwitch(GATE_PARAM, 0, 1, 0, "Gate", { "Off", "On" });
+    configButton(RESET_PARAM, "Reset latches");
     configInput(GATE_INPUT, "Gate");
     configOutput(MOMENTARY_OUTPUT, "Momentary gate");
     configOutput(NOT_MOMENTARY_OUTPUT, "Inverted momentary gate");
@@ -73,70 +84,147 @@ public:
     configOutput(NOT_LATCH_OUTPUT, "Inverted latch gate");
     configOutput(START_OUTPUT, "Momentary high trigger");
     configOutput(END_OUTPUT, "Momentary low trigger");
-    configOutput(START_OR_END_OUTPUT, "Momentary high/low trigger");
-    buttonTrigger.s = dsp::BooleanTrigger::LOW;
+    // configOutput(START_OR_END_OUTPUT, "Momentary high/low trigger");
     lightDivider.setDivision(16);
+
+    for (int i = 0; i < 4; i++) {
+      lastGates[i] = FLOAT_4_ZERO;
+      latches[i] = FLOAT_4_ZERO;
+      gateStartPulses[i] = FLOAT_4_ZERO;
+      gateEndPulses[i] = FLOAT_4_ZERO;
+    }
   }
 
   void process(const ProcessArgs& args) override;
+  json_t* dataToJson() override;
+  void dataFromJson(json_t* root) override;
 };
 
 void
 Jab::process(const ProcessArgs& args)
 {
-  buttonTrigger.processEvent(getParam(GATE_PARAM).getValue());
-  inputTrigger.processEvent(getInput(GATE_INPUT).getNormalVoltage(0.f));
-  bool gate_state;
-  switch (gateSource) {
-    case INPUT_IF_CONNECTED_ELSE_BUTTON:
-      if (getInput(GATE_INPUT).isConnected()) {
-        gate_state = inputTrigger.isHigh();
-      } else {
-        gate_state = buttonTrigger.isHigh();
+  rack::Port gate_input = getInput(GATE_INPUT);
+  int num_channels =
+    numChannels ? numChannels : std::max(gate_input.getChannels(), 1);
+  int channels_div4 = ((num_channels - 1) / 4) + 1;
+  for (int i = 0; i < OUTPUTS_LEN; i++) {
+    getOutput(i).setChannels(num_channels);
+  }
+
+  if (resetButtonTrigger.process(getParam(RESET_PARAM).getValue())) {
+    for (int i = 0; i < 4; i++) {
+      latches[i] = FLOAT_4_ZERO;
+    }
+  }
+
+  simd::float_4 gate_button_mask =
+    (getParam(GATE_PARAM).getValue()) ? FLOAT_4_MASK : FLOAT_4_ZERO;
+  simd::float_4 gates[4];
+
+  GateSource gate_source = gateSource;
+  if (gate_source == INPUT_IF_CONNECTED_ELSE_BUTTON) {
+    if (gate_input.isConnected()) {
+      gate_source = INPUT_ONLY;
+    } else {
+      gate_source = BUTTON_ONLY;
+    }
+  }
+
+  switch (gate_source) {
+    case BUTTON_ONLY:
+      for (int i = 0; i < 4; i++) {
+        gates[i] = gate_button_mask;
       }
       break;
-    case BUTTON_ONLY:
-      gate_state = buttonTrigger.isHigh();
-      break;
     case INPUT_ONLY:
-      gate_state = inputTrigger.isHigh();
+      for (int i = 0; i < 4; i++) {
+        inputTriggers[i].process(
+          gate_input.getVoltageSimd<simd::float_4>(i * 4));
+        gates[i] = inputTriggers[i].isHigh();
+      }
       break;
     case BUTTON_AND_INPUT:
-      gate_state = buttonTrigger.isHigh() && inputTrigger.isHigh();
+      for (int i = 0; i < 4; i++) {
+        // gates[i] = gates[i] && gate_button.getValue();
+        inputTriggers[i].process(
+          gate_input.getVoltageSimd<simd::float_4>(i * 4));
+        gates[i] = gate_button_mask & inputTriggers[i].isHigh();
+      }
       break;
     case BUTTON_OR_INPUT:
-      gate_state = buttonTrigger.isHigh() || inputTrigger.isHigh();
+      for (int i = 0; i < 4; i++) {
+        inputTriggers[i].process(
+          gate_input.getVoltageSimd<simd::float_4>(i * 4));
+        gates[i] = gate_button_mask | inputTriggers[i].isHigh();
+      }
       break;
-    default:
-      gate_state = false;
   }
 
-  int gate_event = combinedGateTrigger.processEvent(gate_state);
-  if (gate_event == dsp::BooleanTrigger::TRIGGERED) {
-    gateStartPulse.trigger(pulseLength);
-    isLatchHigh = !isLatchHigh;
-  } else if (gate_event == dsp::BooleanTrigger::UNTRIGGERED) {
-    gateEndPulse.trigger(pulseLength);
-  }
+  simd::float_4 is_start;
+  simd::float_4 is_end;
+  for (int i = 0, i4 = 0; i < 4; i++, i4 += 4) {
+    gateStartPulses[i] = simd::ifelse(
+      simd::andnot(lastGates[i], gates[i]),
+      pulseLength,
+      simd::fmax(FLOAT_4_ZERO, gateStartPulses[i] - args.sampleTime));
+    gateEndPulses[i] = simd::ifelse(
+      simd::andnot(gates[i], lastGates[i]),
+      pulseLength,
+      simd::fmax(FLOAT_4_ZERO, gateEndPulses[i] - args.sampleTime));
+    latches[i] = simd::ifelse(
+      simd::andnot(lastGates[i], gates[i]), ~latches[i], latches[i]);
 
-  // PulseGenerator::process gives us the pulse state *before* advancing
-  bool is_start = gateStartPulse.process(args.sampleTime);
-  bool is_end = gateEndPulse.process(args.sampleTime);
-  bool is_mom = (is_start || combinedGateTrigger.isHigh());
-  int flags = is_mom + (!is_mom << 1) + (isLatchHigh << 2) +
-              (!isLatchHigh << 3) + (is_start << 4) + (is_end << 5) +
-              ((is_start | is_end) << 6);
-  bool is_light_active = lightDivider.process();
-
-  for (int i = 0; i < OUTPUTS_LEN && i < LIGHTS_LEN; i++) {
-    bool is_high = flags & (1 << i);
-    getOutput(i).setVoltage(is_high ? highVoltageOut : lowVoltageOut);
-    if (is_light_active) {
-      getLight(i).setBrightnessSmooth(is_high,
-                                      args.sampleTime *
-                                        lightDivider.getDivision(),
-                                      lightFadeoutLambda);
+    if (i < channels_div4) {
+      is_start = gateStartPulses[i] > FLOAT_4_ZERO;
+      is_end = gateEndPulses[i] > FLOAT_4_ZERO;
+      simd::float_4 latch_voltage = simd::ifelse(latches[i], highVoltageOut, lowVoltageOut);
+      getOutput(MOMENTARY_OUTPUT)
+        .setVoltageSimd(simd::ifelse(gates[i], highVoltageOut, lowVoltageOut),
+                        i4);
+      getOutput(NOT_MOMENTARY_OUTPUT)
+        .setVoltageSimd(simd::ifelse(gates[i], lowVoltageOut, highVoltageOut),
+                        i4);
+      getOutput(LATCH_OUTPUT)
+        .setVoltageSimd(latch_voltage,
+                        i4);
+      getOutput(NOT_LATCH_OUTPUT)
+        .setVoltageSimd(
+          simd::ifelse(~latches[i], highVoltageOut, lowVoltageOut), i4);
+      getOutput(START_OUTPUT)
+        .setVoltageSimd(simd::ifelse(is_start, highVoltageOut, lowVoltageOut),
+                        i4);
+      getOutput(END_OUTPUT)
+        .setVoltageSimd(simd::ifelse(is_end, highVoltageOut, lowVoltageOut),
+                        i4);
     }
+
+    lastGates[i] = gates[i];
+  }
+  // getLight(MOMENTARY_LIGHT).setBrightnessSmooth(gates[0][0] > 0,
+  //                                 args.sampleTime *
+  //                                   lightDivider.getDivision(),
+  //                                 lightFadeoutLambda);
+}
+
+json_t*
+Jab::dataToJson()
+{
+  json_t* root = json_object();
+  json_object_set_new(root, "numChannels", json_integer(numChannels));
+  json_object_set_new(root, "gateSource", json_integer(gateSource));
+  return root;
+}
+
+void
+Jab::dataFromJson(json_t* root)
+{
+  json_t* val = json_object_get(root, "numChannels");
+  if (val) {
+    numChannels = json_integer_value(val);
+  }
+  val = json_object_get(root, "gateSource");
+  if (val) {
+    gateSource = (GateSource)json_integer_value(val);
   }
 }
 
@@ -160,10 +248,12 @@ struct JabWidget : ModuleWidget
       createParamCentered<CKD6>(mm2px(Vec(x, 8 * YG)), jab, Jab::GATE_PARAM));
     addInput(createInputCentered<PJ301MPort>(
       mm2px(Vec(x, 13 * YG)), jab, Jab::GATE_INPUT));
+    addParam(createParamCentered<VCVButton>(
+      mm2px(Vec(x, 18 * YG)), jab, Jab::RESET_PARAM));
 
-    for (i = 0, y = 19 * YG; i < Jab::OUTPUTS_LEN; i++, y += 6 * YG) {
-      addOutput(createOutputCentered<DarkPJ301MPort>(mm2px(Vec(x, y)), jab, i));
-      addChild(createLightCentered<TinyLight<GreenLight>>(
+    for (i = 0, y = 25 * YG; i < Jab::OUTPUTS_LEN; i++, y += 6 * YG) {
+      addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(x, y)), jab, i));
+      addChild(createLightCentered<TinyLight<RedLight>>(
         mm2px(Vec(5 * XG, y)), jab, i));
     }
   }
@@ -178,6 +268,25 @@ struct JabWidget : ModuleWidget
                                                "Button AND CV",
                                                "Button OR CV" },
                                              &jab->gateSource));
+    menu->addChild(createIndexPtrSubmenuItem("Polyphony channels",
+                                             { "Auto",
+                                               "1",
+                                               "2",
+                                               "3",
+                                               "4",
+                                               "5",
+                                               "6",
+                                               "7",
+                                               "8",
+                                               "9",
+                                               "10",
+                                               "11",
+                                               "12",
+                                               "13",
+                                               "14",
+                                               "15",
+                                               "16" },
+                                             &jab->numChannels));
   }
 };
 
