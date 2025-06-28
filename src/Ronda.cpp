@@ -143,7 +143,7 @@ public:
 
     // configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
-    configParam(RESET_PARAM, 0.f, 1.f, 0.f, "Sync all phasors");
+    configSwitch(RESET_PARAM, 0, 1, 0, "Sync all phasors", { "Off", "On" });
     configInput(RESET_INPUT, "Sync all phasors");
     configParam(FREQ_PARAM,
                 0.f,
@@ -253,8 +253,7 @@ public:
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
 
     dalia::ParamSegmentDisplay* sd =
-      createWidget<dalia::ParamSegmentDisplay>(
-        mm2px(Vec(20.2 , 17 * YG)));
+      createWidget<dalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 17 * YG)));
     sd->rackModule = ronda;
     sd->paramId = Ronda::FREQ_PARAM;
     sd->length = 6;
