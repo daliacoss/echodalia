@@ -41,9 +41,9 @@ public:
     NOT_LATCH_OUTPUT,
     START_OUTPUT,
     END_OUTPUT,
-    // START_OR_END_OUTPUT,
     OUTPUTS_LEN
   };
+  /* LightId order must correspond with OutputId */
   enum LightId
   {
     MOMENTARY_LIGHT,
@@ -52,7 +52,6 @@ public:
     NOT_LATCH_LIGHT,
     START_LIGHT,
     END_LIGHT,
-    // START_OR_END_LIGHT,
     LIGHTS_LEN
   };
   enum GateSource
@@ -69,7 +68,7 @@ public:
   float pulseLength = 0.001f;
   // bool isLatchHigh = false;
   GateSource gateSource = INPUT_IF_CONNECTED_ELSE_BUTTON;
-  float lightFadeoutLambda = 10.f;
+  float lightFadeoutLambda = 15.f;
   int numChannels = 0;
 
   Jab()
@@ -82,10 +81,10 @@ public:
     configOutput(NOT_MOMENTARY_OUTPUT, "Inverted momentary gate");
     configOutput(LATCH_OUTPUT, "Latch gate");
     configOutput(NOT_LATCH_OUTPUT, "Inverted latch gate");
-    configOutput(START_OUTPUT, "Momentary high trigger");
-    configOutput(END_OUTPUT, "Momentary low trigger");
+    configOutput(START_OUTPUT, "Low-to-high trigger");
+    configOutput(END_OUTPUT, "High-to-low trigger");
     // configOutput(START_OR_END_OUTPUT, "Momentary high/low trigger");
-    lightDivider.setDivision(16);
+    lightDivider.setDivision(8);
 
     for (int i = 0; i < 4; i++) {
       lastGates[i] = FLOAT_4_ZERO;
@@ -158,10 +157,11 @@ Jab::process(const ProcessArgs& args)
         gates[i] = gate_button_mask | inputTriggers[i].isHigh();
       }
       break;
+    default:
+      break;
   }
 
-  simd::float_4 is_start;
-  simd::float_4 is_end;
+  simd::float_4 voltages[OUTPUTS_LEN];
   for (int i = 0, i4 = 0; i < 4; i++, i4 += 4) {
     gateStartPulses[i] = simd::ifelse(
       simd::andnot(lastGates[i], gates[i]),
@@ -175,35 +175,35 @@ Jab::process(const ProcessArgs& args)
       simd::andnot(lastGates[i], gates[i]), ~latches[i], latches[i]);
 
     if (i < channels_div4) {
-      is_start = gateStartPulses[i] > FLOAT_4_ZERO;
-      is_end = gateEndPulses[i] > FLOAT_4_ZERO;
-      simd::float_4 latch_voltage = simd::ifelse(latches[i], highVoltageOut, lowVoltageOut);
-      getOutput(MOMENTARY_OUTPUT)
-        .setVoltageSimd(simd::ifelse(gates[i], highVoltageOut, lowVoltageOut),
-                        i4);
-      getOutput(NOT_MOMENTARY_OUTPUT)
-        .setVoltageSimd(simd::ifelse(gates[i], lowVoltageOut, highVoltageOut),
-                        i4);
-      getOutput(LATCH_OUTPUT)
-        .setVoltageSimd(latch_voltage,
-                        i4);
-      getOutput(NOT_LATCH_OUTPUT)
-        .setVoltageSimd(
-          simd::ifelse(~latches[i], highVoltageOut, lowVoltageOut), i4);
-      getOutput(START_OUTPUT)
-        .setVoltageSimd(simd::ifelse(is_start, highVoltageOut, lowVoltageOut),
-                        i4);
-      getOutput(END_OUTPUT)
-        .setVoltageSimd(simd::ifelse(is_end, highVoltageOut, lowVoltageOut),
-                        i4);
+      voltages[START_OUTPUT] = simd::ifelse(
+        gateStartPulses[i] > FLOAT_4_ZERO, highVoltageOut, lowVoltageOut);
+      voltages[END_OUTPUT] = simd::ifelse(
+        gateEndPulses[i] > FLOAT_4_ZERO, highVoltageOut, lowVoltageOut);
+      voltages[LATCH_OUTPUT] =
+        simd::ifelse(latches[i], highVoltageOut, lowVoltageOut);
+      voltages[NOT_LATCH_OUTPUT] =
+        simd::ifelse(latches[i], lowVoltageOut, highVoltageOut);
+      voltages[MOMENTARY_OUTPUT] =
+        simd::ifelse(gates[i], highVoltageOut, lowVoltageOut);
+      voltages[NOT_MOMENTARY_OUTPUT] =
+        simd::ifelse(gates[i], lowVoltageOut, highVoltageOut);
+
+      for (int k = 0; k < OUTPUTS_LEN; k++) {
+        getOutput(k).setVoltageSimd(voltages[k], i4);
+      }
+
+      if (!i && lightDivider.process()) {
+        for (int k = 0; k < OUTPUTS_LEN && k < LIGHTS_LEN; k++) {
+          getLight(k).setBrightnessSmooth(voltages[k][0] > 0,
+                                          args.sampleTime *
+                                            lightDivider.getDivision(),
+                                          lightFadeoutLambda);
+        }
+      }
     }
 
     lastGates[i] = gates[i];
   }
-  // getLight(MOMENTARY_LIGHT).setBrightnessSmooth(gates[0][0] > 0,
-  //                                 args.sampleTime *
-  //                                   lightDivider.getDivision(),
-  //                                 lightFadeoutLambda);
 }
 
 json_t*
@@ -253,8 +253,8 @@ struct JabWidget : ModuleWidget
 
     for (i = 0, y = 25 * YG; i < Jab::OUTPUTS_LEN; i++, y += 6 * YG) {
       addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(x, y)), jab, i));
-      addChild(createLightCentered<TinyLight<RedLight>>(
-        mm2px(Vec(5 * XG, y)), jab, i));
+      addChild(createLightCentered<SmallLight<RedLight>>(
+        mm2px(Vec(XG, y + (2 * YG))), jab, i));
     }
   }
   void appendContextMenu(Menu* menu) override
