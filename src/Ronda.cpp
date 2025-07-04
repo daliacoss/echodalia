@@ -90,43 +90,19 @@ public:
 
   simd::float_4 getFreqRatio()
   {
-    // int input_conn_mask = 0;
     simd::float_4 ratio = getParamVal4(RATE1_PARAM, true);
-    /* convert control voltages to ratios */
-    // ratio = ifelse(
-    //   simd::movemaskInverse<simd::float_4>(input_conn_mask),
-    //   simd::pow(32, simd::clamp(simd::rescale(ratio, -5, 5, -1, 1), -1, 1)),
-    //   ratio);
+
     return ratio;
   }
 
   simd::float_4 getPhase()
   {
-    // int input_conn_mask = 0;
-    simd::float_4 phase =
-      // getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, input_conn_mask, true);
-      getParamVal4(PHASE1_PARAM, true);
-    // phase = ifelse(simd::movemaskInverse<simd::float_4>(input_conn_mask),
-    //             simd::clamp(simd::rescale(phase, 0.f, 10.f, 0.f, 1.f)),
-    //             phase);
+    simd::float_4 phase = getParamVal4(PHASE1_PARAM, true);
     return phase;
   }
 
-  // simd::float_4 isSync()
-  // {
-  //   simd::float_4 sync_params = {
-  //     getInput(SYNC1_INPUT).getVoltage(),
-  //     getInput(SYNC1_INPUT + 1).getVoltage(),
-  //     getInput(SYNC1_INPUT + 2).getVoltage(),
-  //     getInput(SYNC1_INPUT + 3).getVoltage(),
-  //   };
-  //   return syncTrigger.processEvent(sync_params, 0.1f, 1.f) ==
-  //          dsp::SchmittTrigger::TRIGGERED;
-  // }
-
   bool isRunning()
   {
-    // runTrigger.process(getInputOrParamVal(RUN_INPUT, RUN_PARAM), 0.1f, 1.f);
     runTrigger.process(getInput(RUN_INPUT).getNormalVoltage(1.0), 0.1, 1.0);
     return runTrigger.isHigh();
   }
@@ -169,12 +145,9 @@ public:
                   32.f,
                   1.f,
                   0.f);
-      // configInput(i + RATE1_INPUT, phsr_name + " rate");
       configOutput(PHSR1_OUTPUT + i, phsr_name);
       configOutput(CLK1_OUTPUT + i, phsr_name + " clock");
     }
-
-    // debugDivider.setDivision(48000);
   }
 
   void process(const ProcessArgs& args) override;
