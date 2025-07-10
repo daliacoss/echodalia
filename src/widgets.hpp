@@ -1,10 +1,5 @@
-#include <cmath>
-#include <functional>
-#include <iomanip>
-#include <sstream>
-
-#include "plugin.hpp"
 #include "rack.hpp"
+#include "plugin.hpp"
 
 namespace dalia {
 struct CKSSHorizontal : rack::app::SvgSwitch
@@ -29,11 +24,7 @@ public:
   char normalChar = '@';
   std::string text;
 
-  CharacterDisplay()
-  {
-    fontPath = rack::asset::plugin(pluginInstance,
-                                   "res/9-segment-black/9-segment-black.ttf");
-  }
+  CharacterDisplay();
 
   void drawLayer(const DrawArgs& args, int layer) override;
 };
@@ -46,25 +37,40 @@ private:
 public:
   // std::function<float()> getValue = [=]() { return 0; };
   float value = 0;
-  rack::Module *rackModule = nullptr;
+  rack::Module* rackModule = nullptr;
   int paramId = 0;
   int length = 6; // including the decimal point
   // rack::FramebufferWidget* fb;
   CharacterDisplay* displayWidget = nullptr;
 
-  ParamSegmentDisplay()
-  {
-    // fb = new rack::FramebufferWidget;
-    // addChild(fb);
-    displayWidget =
-      rack::createWidget<dalia::CharacterDisplay>(rack::math::Vec(0, 0));
-    // fb->box.size = rack::math::Vec(20,20);
-    addChild(displayWidget);
-    // fb->addChild(displayWidget);
-  }
+  ParamSegmentDisplay();
 
   std::string getText();
   void draw(const DrawArgs& args) override;
+};
+
+struct SolidRect : rack::Widget
+{
+  NVGcolor color;
+
+  void draw(const DrawArgs& args) override;
+};
+
+struct EchodaliaPanel : rack::SvgPanel
+{
+  // NVGcolor backgroundColor;
+  SolidRect* bgw;
+  EchodaliaPanel();
+  void setBackground(std::shared_ptr<rack::window::Svg> svg);
+};
+
+struct EchodaliaWidget : rack::ModuleWidget
+{
+
+public:
+  void refreshPanelTheme();
+  void appendContextMenu(rack::Menu* menu) override;
+  void step() override;
 };
 
 } // namespace dalia

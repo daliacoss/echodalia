@@ -1,6 +1,18 @@
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <sstream>
+
 #include "widgets.hpp"
+#include "plugin.hpp"
 
 namespace dalia {
+CharacterDisplay::CharacterDisplay()
+{
+  fontPath = rack::asset::plugin(pluginInstance,
+                                 "res/9-segment-black/9-segment-black.ttf");
+}
+
 void
 CharacterDisplay::drawLayer(const DrawArgs& args, int layer)
 {
@@ -21,6 +33,17 @@ CharacterDisplay::drawLayer(const DrawArgs& args, int layer)
     }
   }
   rack::Widget::drawLayer(args, layer);
+}
+
+ParamSegmentDisplay::ParamSegmentDisplay()
+{
+  // fb = new rack::FramebufferWidget;
+  // addChild(fb);
+  displayWidget =
+    rack::createWidget<dalia::CharacterDisplay>(rack::math::Vec(0, 0));
+  // fb->box.size = rack::math::Vec(20,20);
+  addChild(displayWidget);
+  // fb->addChild(displayWidget);
 }
 
 std::string
@@ -61,6 +84,71 @@ ParamSegmentDisplay::draw(const DrawArgs& args)
     // fb->setDirty();
   }
   rack::Widget::draw(args);
+}
+
+void
+SolidRect::draw(const DrawArgs& args)
+{
+  nvgFillColor(args.vg, color);
+  nvgBeginPath(args.vg);
+  nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
+  nvgFill(args.vg);
+}
+
+EchodaliaPanel::EchodaliaPanel()
+{
+  rack::SvgPanel();
+  bgw = new SolidRect;
+  bgw->color = THEME_COLORS[0];
+  fb->addChildBottom(bgw);
+}
+
+void
+EchodaliaPanel::setBackground(std::shared_ptr<rack::window::Svg> svg)
+{
+  rack::SvgPanel::setBackground(svg);
+  bgw->box.size = fb->box.size;
+}
+
+void
+EchodaliaWidget::refreshPanelTheme()
+{
+  Echodalia* edm = getModule<Echodalia>();
+  if (!edm || edm->panelTheme >= (int)THEME_COLORS.size()) {
+    return;
+  }
+  NVGcolor color;
+  if (edm->panelTheme < 0) {
+    // TODO: lookup default theme
+    color = nvgRGB(0, 0, 0);
+  } else {
+    color = THEME_COLORS[edm->panelTheme];
+  }
+
+  EchodaliaPanel* panel = dynamic_cast<EchodaliaPanel*>(getPanel());
+  if (panel && panel->bgw && !nvgColorEquals(panel->bgw->color, color)) {
+    panel->bgw->color = color;
+    panel->fb->setDirty();
+  }
+}
+
+void
+EchodaliaWidget::appendContextMenu(rack::Menu* menu)
+{
+  Echodalia* edm = getModule<Echodalia>();
+  menu->addChild(new rack::MenuSeparator);
+  menu->addChild(rack::createIndexSubmenuItem(
+    "Theme",
+    { "Black", "Indigo", "Red", "Viridian" },
+    [=]() { return edm->panelTheme; },
+    [=](int t) { edm->panelTheme = t; }));
+}
+
+void
+EchodaliaWidget::step()
+{
+  refreshPanelTheme();
+  rack::ModuleWidget::step();
 }
 
 } // namespace dalia

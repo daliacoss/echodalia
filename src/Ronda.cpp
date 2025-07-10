@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "Echodalia.hpp"
 #include "plugin.hpp"
 #include "widgets.hpp"
 
@@ -206,7 +205,7 @@ Ronda::process(const ProcessArgs& args)
   }
 }
 
-struct RondaWidget : ModuleWidget
+struct RondaWidget : dalia::EchodaliaWidget
 {
 public:
   static constexpr float XG = 2.54;
@@ -218,7 +217,9 @@ public:
     float x;
 
     setModule(ronda);
-    setPanel(createPanel(asset::plugin(pluginInstance, "res/Ronda.svg")));
+    dalia::EchodaliaPanel* panel = createPanel<dalia::EchodaliaPanel>(
+      asset::plugin(pluginInstance, "res/panels/Ronda.svg"));
+    setPanel(panel);
 
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 1.1 * YG))));
@@ -262,6 +263,7 @@ public:
           mm2px(Vec(x, 15 * YG)), ronda, Ronda::FREQ_INPUT));
       }
     }
+    // setPanelTheme(ronda->panelTheme);
   }
 };
 
