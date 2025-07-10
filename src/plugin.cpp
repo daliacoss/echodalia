@@ -5,17 +5,17 @@ rack::Plugin* pluginInstance;
 namespace dalia {
 
 float
-Echodalia::getInputOrParamVal(int input, int param)
+EDModule::getInputOrParamVal(int input, int param)
 {
   bool foo;
   return getInputOrParamVal(input, param, foo);
 }
 
 float
-Echodalia::getInputOrParamVal(int input,
-                              int param,
-                              bool& isInputConnected,
-                              bool useDisplayVal)
+EDModule::getInputOrParamVal(int input,
+                             int param,
+                             bool& isInputConnected,
+                             bool useDisplayVal)
 {
   isInputConnected = false;
   rack::Input port = getInput(input);
@@ -28,7 +28,7 @@ Echodalia::getInputOrParamVal(int input,
 }
 
 rack::simd::float_4
-Echodalia::getParamVal4(int param1st, bool useDisplayVal)
+EDModule::getParamVal4(int param1st, bool useDisplayVal)
 {
   float raw_vals[4];
   for (int i = 0; i < 4; i++) {
@@ -42,10 +42,10 @@ Echodalia::getParamVal4(int param1st, bool useDisplayVal)
 }
 
 rack::simd::float_4
-Echodalia::getInputOrParamVal4(int input1st,
-                               int param1st,
-                               int& inputConnMask,
-                               bool useDisplayVal)
+EDModule::getInputOrParamVal4(int input1st,
+                              int param1st,
+                              int& inputConnMask,
+                              bool useDisplayVal)
 {
   bool is_input_conn = false;
   float raw_vals[4];
@@ -60,20 +60,20 @@ Echodalia::getInputOrParamVal4(int input1st,
 }
 
 json_t*
-Echodalia::dataToJson(json_t* root)
+EDModule::dataToJson(json_t* root)
 {
   json_object_set_new(root, "theme", json_integer(panelTheme));
   return root;
 }
 
 json_t*
-Echodalia::dataToJson()
+EDModule::dataToJson()
 {
   return dataToJson(json_object());
 }
 
 void
-Echodalia::dataFromJson(json_t* root)
+EDModule::dataFromJson(json_t* root)
 {
   json_t* val = json_object_get(root, "theme");
   if (val) {
@@ -83,7 +83,9 @@ Echodalia::dataFromJson(json_t* root)
 }
 } // namespace dalia
 
-bool nvgColorEquals(NVGcolor a, NVGcolor b) {
+bool
+nvgColorEquals(NVGcolor a, NVGcolor b)
+{
   return (a.r == b.r) && (a.g == b.g) && (a.b == b.b) && (a.a == b.a);
 }
 

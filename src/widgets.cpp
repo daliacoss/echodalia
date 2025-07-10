@@ -3,8 +3,8 @@
 #include <iomanip>
 #include <sstream>
 
-#include "widgets.hpp"
 #include "plugin.hpp"
+#include "widgets.hpp"
 
 namespace dalia {
 CharacterDisplay::CharacterDisplay()
@@ -95,7 +95,7 @@ SolidRect::draw(const DrawArgs& args)
   nvgFill(args.vg);
 }
 
-EchodaliaPanel::EchodaliaPanel()
+EDPanel::EDPanel()
 {
   rack::SvgPanel();
   bgw = new SolidRect;
@@ -104,16 +104,16 @@ EchodaliaPanel::EchodaliaPanel()
 }
 
 void
-EchodaliaPanel::setBackground(std::shared_ptr<rack::window::Svg> svg)
+EDPanel::setBackground(std::shared_ptr<rack::window::Svg> svg)
 {
   rack::SvgPanel::setBackground(svg);
   bgw->box.size = fb->box.size;
 }
 
 void
-EchodaliaWidget::refreshPanelTheme()
+EDModuleWidget::refreshPanelTheme()
 {
-  Echodalia* edm = getModule<Echodalia>();
+  EDModule* edm = getModule<EDModule>();
   if (!edm || edm->panelTheme >= (int)THEME_COLORS.size()) {
     return;
   }
@@ -125,7 +125,7 @@ EchodaliaWidget::refreshPanelTheme()
     color = THEME_COLORS[edm->panelTheme];
   }
 
-  EchodaliaPanel* panel = dynamic_cast<EchodaliaPanel*>(getPanel());
+  EDPanel* panel = dynamic_cast<EDPanel*>(getPanel());
   if (panel && panel->bgw && !nvgColorEquals(panel->bgw->color, color)) {
     panel->bgw->color = color;
     panel->fb->setDirty();
@@ -133,9 +133,9 @@ EchodaliaWidget::refreshPanelTheme()
 }
 
 void
-EchodaliaWidget::appendContextMenu(rack::Menu* menu)
+EDModuleWidget::appendContextMenu(rack::Menu* menu)
 {
-  Echodalia* edm = getModule<Echodalia>();
+  EDModule* edm = getModule<EDModule>();
   menu->addChild(new rack::MenuSeparator);
   menu->addChild(rack::createIndexSubmenuItem(
     "Theme",
@@ -145,7 +145,7 @@ EchodaliaWidget::appendContextMenu(rack::Menu* menu)
 }
 
 void
-EchodaliaWidget::step()
+EDModuleWidget::step()
 {
   refreshPanelTheme();
   rack::ModuleWidget::step();

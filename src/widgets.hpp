@@ -1,5 +1,5 @@
-#include "rack.hpp"
 #include "plugin.hpp"
+#include "rack.hpp"
 
 namespace dalia {
 struct CKSSHorizontal : rack::app::SvgSwitch
@@ -56,15 +56,14 @@ struct SolidRect : rack::Widget
   void draw(const DrawArgs& args) override;
 };
 
-struct EchodaliaPanel : rack::SvgPanel
+struct EDPanel : rack::SvgPanel
 {
-  // NVGcolor backgroundColor;
   SolidRect* bgw;
-  EchodaliaPanel();
+  EDPanel();
   void setBackground(std::shared_ptr<rack::window::Svg> svg);
 };
 
-struct EchodaliaWidget : rack::ModuleWidget
+struct EDModuleWidget : rack::ModuleWidget
 {
 
 public:

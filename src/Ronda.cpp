@@ -7,7 +7,7 @@
 
 using namespace rack;
 
-struct Ronda : dalia::Echodalia
+struct Ronda : dalia::EDModule
 {
 
 protected:
@@ -205,7 +205,7 @@ Ronda::process(const ProcessArgs& args)
   }
 }
 
-struct RondaWidget : dalia::EchodaliaWidget
+struct RondaWidget : dalia::EDModuleWidget
 {
 public:
   static constexpr float XG = 2.54;
@@ -217,7 +217,7 @@ public:
     float x;
 
     setModule(ronda);
-    dalia::EchodaliaPanel* panel = createPanel<dalia::EchodaliaPanel>(
+    dalia::EDPanel* panel = createPanel<dalia::EDPanel>(
       asset::plugin(pluginInstance, "res/panels/Ronda.svg"));
     setPanel(panel);
 

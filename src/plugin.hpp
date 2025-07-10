@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+
 #include "rack.hpp"
 
 namespace dalia {
@@ -10,13 +11,12 @@ const std::vector<NVGcolor> THEME_COLORS = { nvgRGB(0x20, 0x20, 0x20),
                                              nvgRGB(0x77, 0x00, 0x00),
                                              nvgRGB(0x40, 0x82, 0x6d) };
 
-struct Echodalia : rack::Module
+struct EDModule : rack::Module
 {
   int panelTheme = 0;
   // int prevPanelTheme = 0;
 
   virtual float getInputOrParamVal(int input, int param);
-
 
   virtual float getInputOrParamVal(int input,
                                    int param,
@@ -40,7 +40,8 @@ struct Echodalia : rack::Module
 const rack::simd::float_4 FLOAT_4_ZERO = rack::simd::float_4::zero();
 const rack::simd::float_4 FLOAT_4_MASK = rack::simd::float_4::mask();
 
-bool nvgColorEquals(NVGcolor a, NVGcolor b);
+bool
+nvgColorEquals(NVGcolor a, NVGcolor b);
 
 // Declare the Plugin, defined in plugin.cpp
 extern rack::Plugin* pluginInstance;

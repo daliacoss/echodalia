@@ -4,7 +4,7 @@
 #include <string>
 using namespace rack;
 
-struct Jab : dalia::Echodalia
+struct Jab : dalia::EDModule
 {
 protected:
   // dsp::SchmittTrigger inputTrigger;
@@ -212,7 +212,7 @@ Jab::dataToJson()
   json_t* root = json_object();
   json_object_set_new(root, "numChannels", json_integer(numChannels));
   json_object_set_new(root, "gateSource", json_integer(gateSource));
-  return dalia::Echodalia::dataToJson(root);
+  return dalia::EDModule::dataToJson(root);
 }
 
 void
@@ -226,10 +226,10 @@ Jab::dataFromJson(json_t* root)
   if (val) {
     gateSource = (GateSource)json_integer_value(val);
   }
-  dalia::Echodalia::dataFromJson(root);
+  dalia::EDModule::dataFromJson(root);
 }
 
-struct JabWidget : dalia::EchodaliaWidget
+struct JabWidget : dalia::EDModuleWidget
 {
   static constexpr float XG = 2.54;
   static constexpr float YG = 2.141666667;
@@ -241,7 +241,7 @@ struct JabWidget : dalia::EchodaliaWidget
     float y;
 
     setModule(jab);
-    dalia::EchodaliaPanel* panel = createPanel<dalia::EchodaliaPanel>(
+    dalia::EDPanel* panel = createPanel<dalia::EDPanel>(
       asset::plugin(pluginInstance, "res/panels/Jab.svg"));
     setPanel(panel);
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(x, 1.1 * YG))));
@@ -292,7 +292,7 @@ struct JabWidget : dalia::EchodaliaWidget
                                                "15",
                                                "16" },
                                              &jab->numChannels));
-    dalia::EchodaliaWidget::appendContextMenu(menu);
+    dalia::EDModuleWidget::appendContextMenu(menu);
   }
 };
 
