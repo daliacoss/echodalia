@@ -2,7 +2,7 @@
 
 rack::Plugin* pluginInstance;
 
-namespace dalia {
+namespace echodalia {
 
 float
 EDModule::getInputOrParamVal(int input, int param)
@@ -81,12 +81,29 @@ EDModule::dataFromJson(json_t* root)
     // std::cout << "set panel theme to " << panelTheme << "\n";
   }
 }
-} // namespace dalia
+} // namespace echodalia
 
 bool
 nvgColorEquals(NVGcolor a, NVGcolor b)
 {
   return (a.r == b.r) && (a.g == b.g) && (a.b == b.b) && (a.a == b.a);
+}
+
+json_t*
+settingsToJson()
+{
+  json_t* root = json_object();
+  json_object_set_new(root, "defaultTheme", json_integer(defaultTheme));
+  return root;
+}
+
+void
+settingsFromJson(json_t* root)
+{
+  json_t* val = json_object_get(root, "defaultTheme");
+  if (val) {
+    defaultTheme = json_integer_value(val);
+  }
 }
 
 void
@@ -98,3 +115,5 @@ init(rack::Plugin* p)
   p->addModel(modelRonda);
   p->addModel(modelJab);
 }
+
+unsigned int defaultTheme = 0;

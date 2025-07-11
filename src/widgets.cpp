@@ -6,7 +6,7 @@
 #include "plugin.hpp"
 #include "widgets.hpp"
 
-namespace dalia {
+namespace echodalia {
 CharacterDisplay::CharacterDisplay()
 {
   fontPath = rack::asset::plugin(pluginInstance,
@@ -40,7 +40,7 @@ ParamSegmentDisplay::ParamSegmentDisplay()
   // fb = new rack::FramebufferWidget;
   // addChild(fb);
   displayWidget =
-    rack::createWidget<dalia::CharacterDisplay>(rack::math::Vec(0, 0));
+    rack::createWidget<echodalia::CharacterDisplay>(rack::math::Vec(0, 0));
   // fb->box.size = rack::math::Vec(20,20);
   addChild(displayWidget);
   // fb->addChild(displayWidget);
@@ -120,7 +120,7 @@ EDModuleWidget::refreshPanelTheme()
   NVGcolor color;
   if (edm->panelTheme < 0) {
     // TODO: lookup default theme
-    color = nvgRGB(0, 0, 0);
+    color = THEME_COLORS[defaultTheme];
   } else {
     color = THEME_COLORS[edm->panelTheme];
   }
@@ -136,12 +136,20 @@ void
 EDModuleWidget::appendContextMenu(rack::Menu* menu)
 {
   EDModule* edm = getModule<EDModule>();
+  std::vector<std::string> names_w_default = THEME_NAMES;
+  names_w_default.insert(names_w_default.begin(), "Default");
+
   menu->addChild(new rack::MenuSeparator);
   menu->addChild(rack::createIndexSubmenuItem(
     "Theme",
-    { "Black", "Indigo", "Red", "Viridian" },
-    [=]() { return edm->panelTheme; },
-    [=](int t) { edm->panelTheme = t; }));
+    names_w_default,
+    [=]() { return edm->panelTheme + 1; },
+    [=](int t) { edm->panelTheme = t - 1; }));
+  menu->addChild(rack::createIndexSubmenuItem(
+    "Default theme",
+    THEME_NAMES,
+    [=]() { return defaultTheme; },
+    [=](int t) { defaultTheme = t; }));
 }
 
 void
@@ -151,4 +159,4 @@ EDModuleWidget::step()
   rack::ModuleWidget::step();
 }
 
-} // namespace dalia
+} // namespace echodalia

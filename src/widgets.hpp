@@ -1,7 +1,7 @@
 #include "plugin.hpp"
 #include "rack.hpp"
 
-namespace dalia {
+namespace echodalia {
 struct CKSSHorizontal : rack::app::SvgSwitch
 {
   CKSSHorizontal()
@@ -72,5 +72,5 @@ public:
   void step() override;
 };
 
-} // namespace dalia
+} // namespace echodalia
 

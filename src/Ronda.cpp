@@ -7,7 +7,7 @@
 
 using namespace rack;
 
-struct Ronda : dalia::EDModule
+struct Ronda : echodalia::EDModule
 {
 
 protected:
@@ -205,7 +205,7 @@ Ronda::process(const ProcessArgs& args)
   }
 }
 
-struct RondaWidget : dalia::EDModuleWidget
+struct RondaWidget : echodalia::EDModuleWidget
 {
 public:
   static constexpr float XG = 2.54;
@@ -217,7 +217,7 @@ public:
     float x;
 
     setModule(ronda);
-    dalia::EDPanel* panel = createPanel<dalia::EDPanel>(
+    echodalia::EDPanel* panel = createPanel<echodalia::EDPanel>(
       asset::plugin(pluginInstance, "res/panels/Ronda.svg"));
     setPanel(panel);
 
@@ -226,8 +226,8 @@ public:
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 59 * YG))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
 
-    dalia::ParamSegmentDisplay* sd =
-      createWidget<dalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 17 * YG)));
+    echodalia::ParamSegmentDisplay* sd =
+      createWidget<echodalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 17 * YG)));
     sd->rackModule = ronda;
     sd->paramId = Ronda::FREQ_PARAM;
     sd->length = 6;
