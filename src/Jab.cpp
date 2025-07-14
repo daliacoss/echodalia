@@ -244,8 +244,8 @@ struct JabWidget : echodalia::EDModuleWidget
     echodalia::EDPanel* panel = createPanel<echodalia::EDPanel>(
       asset::plugin(pluginInstance, "res/panels/Jab.svg"));
     setPanel(panel);
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(x, 1.1 * YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(x, 59 * YG))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(5 * XG, 59 * YG))));
 
     addParam(
       createParamCentered<CKD6>(mm2px(Vec(x, 8 * YG)), jab, Jab::GATE_PARAM));
