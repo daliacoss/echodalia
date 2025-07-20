@@ -114,6 +114,7 @@ init(rack::Plugin* p)
   // Add modules here
   p->addModel(modelRonda);
   p->addModel(modelJab);
+  p->addModel(modelAgate);
 }
 
 unsigned int defaultTheme = 0;

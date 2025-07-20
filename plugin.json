@@ -24,6 +24,12 @@
       "name": "Jab",
       "description": "A gate inverter, gate-to-trigger, and gate-to-latch with a momentary pushbutton",
       "tags": ["Polyphonic", "Utility"]
+    },
+    {
+      "slug": "Agate",
+      "name": "Agate",
+      "description": "An addressable gate sequencer",
+      "tags": ["Sequencer"]
     }
   ]
 }

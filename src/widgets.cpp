@@ -37,13 +37,9 @@ CharacterDisplay::drawLayer(const DrawArgs& args, int layer)
 
 ParamSegmentDisplay::ParamSegmentDisplay()
 {
-  // fb = new rack::FramebufferWidget;
-  // addChild(fb);
   displayWidget =
     rack::createWidget<echodalia::CharacterDisplay>(rack::math::Vec(0, 0));
-  // fb->box.size = rack::math::Vec(20,20);
   addChild(displayWidget);
-  // fb->addChild(displayWidget);
 }
 
 std::string
@@ -81,7 +77,6 @@ ParamSegmentDisplay::draw(const DrawArgs& args)
     if (displayWidget) {
       displayWidget->text = getText();
     }
-    // fb->setDirty();
   }
   rack::Widget::draw(args);
 }
@@ -93,6 +88,33 @@ SolidRect::draw(const DrawArgs& args)
   nvgBeginPath(args.vg);
   nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
   nvgFill(args.vg);
+}
+
+void
+DotMatrixGridDisplay::draw(const DrawArgs& args)
+{
+  float w = rack::mm2px(dotsPerCol * dotSizeMm.x);
+  float h = rack::mm2px(dotsPerRow * dotSizeMm.y);
+  float x;
+  float y;
+  NVGcolor fill;
+  std::vector<int> cell;
+
+  for (const auto& p : cells) {
+    cell = p.first;
+    CellState state = p.second;
+    if (!(state & ENABLED)) {
+      continue;
+    }
+    x =
+      rack::mm2px((dotsPerCol + dotsBetweenCols) * dotSizeMm.x * cell.front());
+    y = rack::mm2px((dotsPerRow + dotsBetweenRows) * dotSizeMm.y * cell.back());
+    fill = (state & PLAYING) ? playingColor : activeColor;
+    nvgBeginPath(args.vg);
+    nvgFillColor(args.vg, fill);
+    nvgRect(args.vg, x, y, w, h);
+    nvgFill(args.vg);
+  }
 }
 
 EDPanel::EDPanel()
@@ -119,7 +141,6 @@ EDModuleWidget::refreshPanelTheme()
   }
   NVGcolor color;
   if (edm->panelTheme < 0) {
-    // TODO: lookup default theme
     color = THEME_COLORS[defaultTheme];
   } else {
     color = THEME_COLORS[edm->panelTheme];

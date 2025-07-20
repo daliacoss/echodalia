@@ -16,9 +16,6 @@ struct CKSSHorizontal : rack::app::SvgSwitch
 
 struct CharacterDisplay : rack::Widget
 {
-protected:
-  float value = 0.f;
-
 public:
   std::string fontPath;
   char normalChar = '@';
@@ -35,12 +32,10 @@ private:
   float prevValue;
 
 public:
-  // std::function<float()> getValue = [=]() { return 0; };
   float value = 0;
   rack::Module* rackModule = nullptr;
   int paramId = 0;
   int length = 6; // including the decimal point
-  // rack::FramebufferWidget* fb;
   CharacterDisplay* displayWidget = nullptr;
 
   ParamSegmentDisplay();
@@ -56,6 +51,25 @@ struct SolidRect : rack::Widget
   void draw(const DrawArgs& args) override;
 };
 
+struct DotMatrixGridDisplay : rack::Widget
+{
+public:
+  enum CellState {
+    ENABLED = 1,
+    PLAYING = 2,
+    SELECTED = 4
+  };
+  int dotsPerCol = 4;
+  int dotsPerRow = 4;
+  int dotsBetweenCols = 3;
+  int dotsBetweenRows = 1;
+  NVGcolor activeColor = nvgRGB(0x86, 0x86, 0x86);
+  NVGcolor playingColor = nvgRGB(0xFF, 0xFF, 0xFF);
+  rack::Vec dotSizeMm = rack::Vec(1.07083, 1.07083);
+  std::map<std::vector<int>, CellState> cells;
+  void draw(const DrawArgs& args) override;
+};
+
 struct EDPanel : rack::SvgPanel
 {
   SolidRect* bgw;
@@ -65,8 +79,6 @@ struct EDPanel : rack::SvgPanel
 
 struct EDModuleWidget : rack::ModuleWidget
 {
-
-public:
   void refreshPanelTheme();
   void appendContextMenu(rack::Menu* menu) override;
   void step() override;
