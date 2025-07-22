@@ -186,8 +186,15 @@ private:
   uint8_t _columns[Agate::PATTERNS_LEN];
   int _currentStep;
   int _numChannels;
+  int _currentTouchAction = 0;
 
 public:
+  enum TouchAction
+  {
+    NONE = 0,
+    DRAW,
+    ERASE
+  };
   echodalia::DotMatrixGridDisplay* dotMatrix;
   FramebufferWidget* fb;
   AgateWidget(Agate* agate);
@@ -213,6 +220,44 @@ AgateWidget::AgateWidget(Agate* agate)
   fb = new FramebufferWidget;
   fb->addChild(dotMatrix);
   addChild(fb);
+  dotMatrix->box.size = Vec(86.2608, 130.123);
+
+  dotMatrix->pressCallback = [=](const ButtonEvent& e, int col, int row) {
+    Agate* agate = getModule<Agate>();
+    if (!agate) {
+      return;
+    }
+    if (col < 0 || row < 0) {
+      // clicked margin or space between cells
+      _currentTouchAction = NONE;
+    } else {
+      // toggle cell under cursor
+      agate->patterns[col] ^= 1 << row;
+      _currentTouchAction = ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
+    }
+  };
+
+  dotMatrix->dragHoverCallback = [=](const DragHoverEvent& e, int col, int row) {
+    Agate* agate = getModule<Agate>();
+    if (!agate) {
+      return;
+    }
+    if (col >= 0 && row >= 0) {
+      switch (_currentTouchAction) {
+        case NONE:
+          agate->patterns[col] ^= 1 << row;
+          _currentTouchAction =
+            ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
+          break;
+        case DRAW:
+          agate->patterns[col] |= 1 << row;
+          break;
+        case ERASE:
+          agate->patterns[col] &= ~((char)(1 << row));
+          break;
+      }
+    }
+  };
 
   SvgWidget* overlay = createWidget<SvgWidget>(mm2px(Vec(8.403, 34.431)));
   FramebufferWidget* overlay_fb = new FramebufferWidget;
@@ -220,8 +265,6 @@ AgateWidget::AgateWidget(Agate* agate)
     rack::asset::plugin(pluginInstance, "res/widgets/DotMatrix_overlay.svg")));
   overlay_fb->addChild(overlay);
   addChild(overlay_fb);
-
-  dotMatrix->box.size = Vec(86.2608, 130.123);
 
   addInput(createInputCentered<PJ301MPort>(
     mm2px(Vec(7.62, 21.4167)), agate, Agate::ADDRESS_INPUT));

@@ -90,11 +90,37 @@ SolidRect::draw(const DrawArgs& args)
   nvgFill(args.vg);
 }
 
+std::vector<int>
+DotMatrixGridDisplay::pxToCellCoords(rack::Vec pos)
+{
+  rack::Vec cell_size =
+    rack::Vec(dotsPerCol * dotSize.x, dotsPerRow * dotSize.y);
+  std::vector<int> coords;
+  if (!(cell_size.x && cell_size.y)) {
+    return coords;
+  }
+
+  float divisor = ((dotsPerCol + dotsBetweenCols) * dotSize.x);
+  float col = std::floor(pos.x / divisor);
+  if (std::fmod(pos.x, divisor) >= cell_size.x) {
+    return coords;
+  }
+
+  divisor = ((dotsPerRow + dotsBetweenRows) * dotSize.y);
+  float row = std::floor(pos.y / divisor);
+  if (std::fmod(pos.y, divisor) >= cell_size.y) {
+    return coords;
+  }
+
+  coords = { (int)col, (int)row };
+  return coords;
+}
+
 void
 DotMatrixGridDisplay::draw(const DrawArgs& args)
 {
-  float w = rack::mm2px(dotsPerCol * dotSizeMm.x);
-  float h = rack::mm2px(dotsPerRow * dotSizeMm.y);
+  float w = dotsPerCol * dotSize.x;
+  float h = dotsPerRow * dotSize.y;
   float x;
   float y;
   NVGcolor fill;
@@ -106,15 +132,50 @@ DotMatrixGridDisplay::draw(const DrawArgs& args)
     if (!(state & ENABLED)) {
       continue;
     }
-    x =
-      rack::mm2px((dotsPerCol + dotsBetweenCols) * dotSizeMm.x * cell.front());
-    y = rack::mm2px((dotsPerRow + dotsBetweenRows) * dotSizeMm.y * cell.back());
+    x = (dotsPerCol + dotsBetweenCols) * dotSize.x * cell.front();
+    y = (dotsPerRow + dotsBetweenRows) * dotSize.y * cell.back();
     fill = (state & PLAYING) ? playingColor : activeColor;
     nvgBeginPath(args.vg);
     nvgFillColor(args.vg, fill);
     nvgRect(args.vg, x, y, w, h);
     nvgFill(args.vg);
   }
+}
+
+void
+DotMatrixGridDisplay::onButton(const ButtonEvent& e)
+{
+  OpaqueWidget::onButton(e);
+  if (e.button == GLFW_MOUSE_BUTTON_LEFT && e.action == GLFW_PRESS) {
+    std::vector<int> cell_coords = pxToCellCoords(e.pos);
+    // if ((cell_coords.size() == 2) && pressCallback) {
+    if (pressCallback) {
+      if (cell_coords.size() == 2) {
+        pressCallback(e, cell_coords.front(), cell_coords.back());
+      } else {
+        pressCallback(e, -1, -1);
+      }
+    }
+  }
+}
+
+void
+DotMatrixGridDisplay::onDragHover(const DragHoverEvent& e)
+{
+  OpaqueWidget::onDragHover(e);
+  if (e.button == GLFW_MOUSE_BUTTON_LEFT &&
+      (e.mouseDelta.x || e.mouseDelta.y)) {
+
+    std::vector<int> cell_coords = pxToCellCoords(e.pos);
+    if (dragHoverCallback) {
+      if (cell_coords.size() == 2) {
+        dragHoverCallback(e, cell_coords.front(), cell_coords.back());
+      } else {
+        dragHoverCallback(e, -1, -1);
+      }
+    }
+  }
+  e.consume(this);
 }
 
 EDPanel::EDPanel()

@@ -1,3 +1,5 @@
+#include <functional>
+
 #include "plugin.hpp"
 #include "rack.hpp"
 
@@ -51,10 +53,11 @@ struct SolidRect : rack::Widget
   void draw(const DrawArgs& args) override;
 };
 
-struct DotMatrixGridDisplay : rack::Widget
+struct DotMatrixGridDisplay : rack::OpaqueWidget
 {
 public:
-  enum CellState {
+  enum CellState
+  {
     ENABLED = 1,
     PLAYING = 2,
     SELECTED = 4
@@ -65,8 +68,14 @@ public:
   int dotsBetweenRows = 1;
   NVGcolor activeColor = nvgRGB(0x86, 0x86, 0x86);
   NVGcolor playingColor = nvgRGB(0xFF, 0xFF, 0xFF);
-  rack::Vec dotSizeMm = rack::Vec(1.07083, 1.07083);
+  rack::Vec dotSize = rack::mm2px(rack::Vec(1.07083, 1.07083));
   std::map<std::vector<int>, CellState> cells;
+  std::function<void(const ButtonEvent&, int, int)> pressCallback;
+  std::function<void(const DragHoverEvent&, int, int)> dragHoverCallback;
+
+  std::vector<int> pxToCellCoords(rack::Vec pos);
+  void onButton(const ButtonEvent& e) override;
+  void onDragHover(const DragHoverEvent& e) override;
   void draw(const DrawArgs& args) override;
 };
 
