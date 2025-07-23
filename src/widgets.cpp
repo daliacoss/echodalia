@@ -125,6 +125,8 @@ DotMatrixGridDisplay::draw(const DrawArgs& args)
   float y;
   NVGcolor fill;
   std::vector<int> cell;
+  int total_dots_per_col = dotsPerCol + dotsBetweenCols;
+  int total_dots_per_row = dotsPerRow + dotsBetweenRows;
 
   for (const auto& p : cells) {
     cell = p.first;
@@ -132,15 +134,35 @@ DotMatrixGridDisplay::draw(const DrawArgs& args)
     if (!(state & ENABLED)) {
       continue;
     }
-    x = (dotsPerCol + dotsBetweenCols) * dotSize.x * cell.front();
-    y = (dotsPerRow + dotsBetweenRows) * dotSize.y * cell.back();
+    x = total_dots_per_col * dotSize.x * cell.front();
+    y = total_dots_per_row * dotSize.y * cell.back();
     fill = (state & PLAYING) ? playingColor : activeColor;
     nvgBeginPath(args.vg);
     nvgFillColor(args.vg, fill);
     nvgRect(args.vg, x, y, w, h);
     nvgFill(args.vg);
   }
+
+  for (unsigned int d = columnDividers, i = 1; d > 0; d >>= 1, i++) {
+    if (d % 2) {
+      nvgBeginPath(args.vg);
+      nvgFillColor(args.vg, activeColor);
+      nvgRect(args.vg,
+              dotSize.x * ((total_dots_per_col)*i - (dotsBetweenCols / 2) - 1),
+              dotSize.y,
+              dotSize.x,
+              box.size.y - (dotSize.y * 2));
+      nvgFill(args.vg);
+    }
+  }
 }
+
+void
+DotMatrixGridDisplay::setBoxSizeInDots(float w, float h) {
+  box.size.x = w * dotSize.x;
+  box.size.y = h * dotSize.y;
+}
+
 
 void
 DotMatrixGridDisplay::onButton(const ButtonEvent& e)

@@ -66,6 +66,7 @@ public:
   int dotsPerRow = 4;
   int dotsBetweenCols = 3;
   int dotsBetweenRows = 1;
+  uint32_t columnDividers = 0;
   NVGcolor activeColor = nvgRGB(0x86, 0x86, 0x86);
   NVGcolor playingColor = nvgRGB(0xFF, 0xFF, 0xFF);
   rack::Vec dotSize = rack::mm2px(rack::Vec(1.07083, 1.07083));
@@ -74,6 +75,7 @@ public:
   std::function<void(const DragHoverEvent&, int, int)> dragHoverCallback;
 
   std::vector<int> pxToCellCoords(rack::Vec pos);
+  void setBoxSizeInDots(float w, float h);
   void onButton(const ButtonEvent& e) override;
   void onDragHover(const DragHoverEvent& e) override;
   void draw(const DrawArgs& args) override;

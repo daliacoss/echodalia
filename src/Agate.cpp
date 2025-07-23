@@ -220,7 +220,7 @@ AgateWidget::AgateWidget(Agate* agate)
   fb = new FramebufferWidget;
   fb->addChild(dotMatrix);
   addChild(fb);
-  dotMatrix->box.size = Vec(86.2608, 130.123);
+  dotMatrix->setBoxSizeInDots(25, 39);
 
   dotMatrix->pressCallback = [=](const ButtonEvent& e, int col, int row) {
     Agate* agate = getModule<Agate>();
@@ -231,33 +231,45 @@ AgateWidget::AgateWidget(Agate* agate)
       // clicked margin or space between cells
       _currentTouchAction = NONE;
     } else {
-      // toggle cell under cursor
-      agate->patterns[col] ^= 1 << row;
-      _currentTouchAction = ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
-    }
-  };
-
-  dotMatrix->dragHoverCallback = [=](const DragHoverEvent& e, int col, int row) {
-    Agate* agate = getModule<Agate>();
-    if (!agate) {
-      return;
-    }
-    if (col >= 0 && row >= 0) {
-      switch (_currentTouchAction) {
-        case NONE:
-          agate->patterns[col] ^= 1 << row;
-          _currentTouchAction =
-            ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
-          break;
-        case DRAW:
-          agate->patterns[col] |= 1 << row;
-          break;
-        case ERASE:
-          agate->patterns[col] &= ~((char)(1 << row));
-          break;
+      Port input = agate->getInput(Agate::PATTERN_INPUT + col);
+      if (input.isConnected()) {
+        // no point toggling cell that will be immediately reverted
+        _currentTouchAction = NONE;
+      } else {
+        // toggle cell under cursor
+        agate->patterns[col] ^= 1 << row;
+        _currentTouchAction =
+          ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
       }
     }
   };
+
+  dotMatrix->dragHoverCallback =
+    [=](const DragHoverEvent& e, int col, int row) {
+      Agate* agate = getModule<Agate>();
+      if (!agate) {
+        return;
+      }
+      if (col >= 0 && row >= 0) {
+        Port input = agate->getInput(Agate::PATTERN_INPUT + col);
+        if (input.isConnected()) {
+          return;
+        }
+        switch (_currentTouchAction) {
+          case NONE:
+            agate->patterns[col] ^= 1 << row;
+            _currentTouchAction =
+              ((agate->patterns[col] >> row) % 2) ? DRAW : ERASE;
+            break;
+          case DRAW:
+            agate->patterns[col] |= 1 << row;
+            break;
+          case ERASE:
+            agate->patterns[col] &= ~((char)(1 << row));
+            break;
+        }
+      }
+    };
 
   SvgWidget* overlay = createWidget<SvgWidget>(mm2px(Vec(8.403, 34.431)));
   FramebufferWidget* overlay_fb = new FramebufferWidget;
@@ -315,6 +327,10 @@ AgateWidget::step()
     }
     _columns[i] = agate->patterns[i];
   }
+
+  dotMatrix->columnDividers = (num_channels == 4)   ? 0b111
+                              : (num_channels == 2) ? 0b010
+                                                    : 0;
 
   _numChannels = num_channels;
   _currentStep = cur_step;
