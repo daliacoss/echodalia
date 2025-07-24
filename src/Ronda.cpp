@@ -21,13 +21,13 @@ public:
   static constexpr float MAX_VOUT = 10.f;
   enum ParamId
   {
-    // RUN_PARAM,
     RESET_PARAM,
     FREQ_PARAM,
     RATE1_PARAM,
     PHASE1_PARAM = RATE1_PARAM + PHASORS_LEN,
     // SYNC1_PARAM = PHASE1_PARAM + PHASORS_LEN,
-    PARAMS_LEN = PHASE1_PARAM + PHASORS_LEN
+    RUN_PARAM = PHASE1_PARAM + PHASORS_LEN,
+    PARAMS_LEN
   };
   enum InputId
   {
@@ -102,7 +102,8 @@ public:
 
   bool isRunning()
   {
-    runTrigger.process(getInput(RUN_INPUT).getNormalVoltage(1.0), 0.1, 1.0);
+    // runTrigger.process(getInput(RUN_INPUT).getNormalVoltage(1.0), 0.1, 1.0);
+    runTrigger.process(getInputOrParamVal(RUN_INPUT, RUN_PARAM));
     return runTrigger.isHigh();
   }
 
@@ -116,7 +117,7 @@ public:
   {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 
-    // configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
+    configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
     configSwitch(RESET_PARAM, 0, 1, 0, "Sync all phasors", { "Off", "On" });
     configInput(RESET_INPUT, "Sync all phasors");
@@ -208,11 +209,10 @@ Ronda::process(const ProcessArgs& args)
 struct RondaWidget : echodalia::EDModuleWidget
 {
 public:
-  static constexpr float XG = 2.54;
-  static constexpr float YG = 2.141666667;
-
   RondaWidget(Ronda* ronda)
   {
+    constexpr float XG = 2.54;
+    constexpr float YG = 2.141666667;
     int i;
     float x;
 
@@ -221,10 +221,11 @@ public:
       asset::plugin(pluginInstance, "res/panels/Ronda.svg"));
     setPanel(panel);
 
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 1.1 * YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 59 * YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(23 * XG, 59 * YG))));
+    addChild(createWidget<ScrewBlack>(Vec(0, 0)));
+    addChild(createWidget<ScrewBlack>(Vec(11 * RACK_GRID_WIDTH, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(0, RACK_GRID_HEIGHT - 15)));
+    addChild(createWidget<ScrewSilver>(
+      Vec(11 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - 15)));
 
     echodalia::ParamSegmentDisplay* sd =
       createWidget<echodalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 17 * YG)));
@@ -251,12 +252,14 @@ public:
       /* last column only */
       if (i == Ronda::PHASORS_LEN - 1) {
         addParam(createParamCentered<VCVButton>(
-          mm2px(Vec(x, 3 * YG)), ronda, Ronda::RESET_PARAM));
+          mm2px(Vec(x - 3 * XG, 7 * YG)), ronda, Ronda::RESET_PARAM));
         addInput(createInputCentered<PJ301MPort>(
           mm2px(Vec(x, 7 * YG)), ronda, Ronda::RESET_INPUT));
       }
       /* 1st column only */
       else if (!i) {
+        addParam(createParamCentered<CKSS>(
+          mm2px(Vec(x + 3 * XG, 7 * YG)), ronda, Ronda::RUN_PARAM));
         addInput(createInputCentered<PJ301MPort>(
           mm2px(Vec(x, 7 * YG)), ronda, Ronda::RUN_INPUT));
         addInput(createInputCentered<PJ301MPort>(

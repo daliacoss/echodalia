@@ -10,9 +10,9 @@ struct CKSSHorizontal : rack::app::SvgSwitch
   {
     shadow->opacity = 0.0;
     addFrame(rack::Svg::load(
-      rack::asset::plugin(pluginInstance, "res/CKSSHorizontal_0.svg")));
+      rack::asset::plugin(pluginInstance, "res/widgets/CKSSHorizontal_0.svg")));
     addFrame(rack::Svg::load(
-      rack::asset::plugin(pluginInstance, "res/CKSSHorizontal_1.svg")));
+      rack::asset::plugin(pluginInstance, "res/widgets/CKSSHorizontal_1.svg")));
   }
 };
 
