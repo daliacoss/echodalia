@@ -119,7 +119,7 @@ public:
 
     configSwitch(RUN_PARAM, 0.f, 1.f, 1.0f, "Run", { "Off", "On" });
     configInput(RUN_INPUT, "Run");
-    configSwitch(RESET_PARAM, 0, 1, 0, "Sync all phasors", { "Off", "On" });
+    configButton(RESET_PARAM, "Sync all phasors");
     configInput(RESET_INPUT, "Sync all phasors");
     configParam(FREQ_PARAM,
                 0.f,
