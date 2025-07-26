@@ -34,10 +34,10 @@ public:
     RUN_INPUT,
     RESET_INPUT,
     FREQ_INPUT,
-    // RATE1_INPUT,
-    // PHASE1_INPUT = RATE1_INPUT + PHASORS_LEN,
     SYNC1_INPUT,
-    INPUTS_LEN = SYNC1_INPUT + PHASORS_LEN
+    RATE1_INPUT = SYNC1_INPUT + PHASORS_LEN,
+    PHASE1_INPUT = RATE1_INPUT + PHASORS_LEN,
+    INPUTS_LEN = PHASE1_INPUT + PHASORS_LEN
   };
   enum OutputId
   {
@@ -87,6 +87,18 @@ public:
     return phasors[i];
   }
 
+  float getFreqRatio(int i)
+  {
+    bool is_conn;
+    float ratio =
+      getInputOrParamVal(RATE1_INPUT + i, RATE1_PARAM + i, is_conn, true);
+    if (is_conn) {
+      ratio = std::pow(32.0, math::clamp(ratio, -5.0, 5.0) / 5.0);
+    }
+
+    return ratio;
+  }
+
   simd::float_4 getFreqRatio()
   {
     simd::float_4 ratio = getParamVal4(RATE1_PARAM, true);
@@ -96,7 +108,8 @@ public:
 
   simd::float_4 getPhase()
   {
-    simd::float_4 phase = getParamVal4(PHASE1_PARAM, true);
+    int is_conn;
+    simd::float_4 phase = getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, is_conn, true);
     return phase;
   }
 
@@ -181,7 +194,8 @@ Ronda::process(const ProcessArgs& args)
         phasors[i] = 0;
         clockPulses[i].trigger();
       } else {
-        ratio = (double)getParamQuantity(RATE1_PARAM + i)->getDisplayValue();
+        ratio = (double)getFreqRatio(i);
+        // ratio = (double)getParamQuantity(RATE1_PARAM + i)->getDisplayValue();
         phasors[i] += delta * ratio;
         if (phasors[i] >= 1.0) {
           phasors[i] = std::fmod(phasors[i], 1.0);
@@ -228,23 +242,27 @@ public:
       Vec(11 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - 15)));
 
     echodalia::ParamSegmentDisplay* sd =
-      createWidget<echodalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 17 * YG)));
+      createWidget<echodalia::ParamSegmentDisplay>(mm2px(Vec(20.2, 14 * YG)));
     sd->rackModule = ronda;
     sd->paramId = Ronda::FREQ_PARAM;
     sd->length = 6;
     addChild(sd);
 
-    addParam(createParamCentered<RoundLargeBlackKnob>(
-      mm2px(Vec(12 * XG, 10 * YG)), ronda, Ronda::FREQ_PARAM));
+    addParam(createParamCentered<RoundBlackKnob>(
+      mm2px(Vec(12 * XG, 9 * YG - 1.612)), ronda, Ronda::FREQ_PARAM));
 
     for (i = 0, x = 3 * XG; i < Ronda::PHASORS_LEN; i++, x += 6 * XG) {
       /* all columns */
-      addParam(createParamCentered<RoundBlackKnob>(
-        mm2px(Vec(x, 24 * YG)), ronda, Ronda::RATE1_PARAM + i));
-      addParam(createParamCentered<RoundBlackKnob>(
-        mm2px(Vec(x, 32 * YG)), ronda, Ronda::PHASE1_PARAM + i));
+      addParam(createParamCentered<RoundSmallBlackKnob>(
+        mm2px(Vec(x, 19 * YG)), ronda, Ronda::RATE1_PARAM + i));
       addInput(createInputCentered<PJ301MPort>(
-        mm2px(Vec(x, 40 * YG)), ronda, Ronda::SYNC1_INPUT + i));
+        mm2px(Vec(x, 23 * YG)), ronda, Ronda::RATE1_INPUT + i));
+      addParam(createParamCentered<RoundSmallBlackKnob>(
+        mm2px(Vec(x, 30 * YG)), ronda, Ronda::PHASE1_PARAM + i));
+      addInput(createInputCentered<PJ301MPort>(
+        mm2px(Vec(x, 34 * YG)), ronda, Ronda::PHASE1_INPUT + i));
+      addInput(createInputCentered<PJ301MPort>(
+        mm2px(Vec(x, 41 * YG)), ronda, Ronda::SYNC1_INPUT + i));
       addOutput(createOutputCentered<PJ301MPort>(
         mm2px(Vec(x, 48 * YG)), ronda, Ronda::PHSR1_OUTPUT + i));
       addOutput(createOutputCentered<PJ301MPort>(
@@ -252,18 +270,18 @@ public:
       /* last column only */
       if (i == Ronda::PHASORS_LEN - 1) {
         addParam(createParamCentered<VCVButton>(
-          mm2px(Vec(x - 3 * XG, 7 * YG)), ronda, Ronda::RESET_PARAM));
+          mm2px(Vec(x - 3 * XG, 4 * YG)), ronda, Ronda::RESET_PARAM));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 7 * YG)), ronda, Ronda::RESET_INPUT));
+          mm2px(Vec(x, 4 * YG)), ronda, Ronda::RESET_INPUT));
       }
       /* 1st column only */
       else if (!i) {
         addParam(createParamCentered<CKSS>(
-          mm2px(Vec(x + 3 * XG, 7 * YG)), ronda, Ronda::RUN_PARAM));
+          mm2px(Vec(x + 3 * XG, 4 * YG)), ronda, Ronda::RUN_PARAM));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 7 * YG)), ronda, Ronda::RUN_INPUT));
+          mm2px(Vec(x, 4 * YG)), ronda, Ronda::RUN_INPUT));
         addInput(createInputCentered<PJ301MPort>(
-          mm2px(Vec(x, 15 * YG)), ronda, Ronda::FREQ_INPUT));
+          mm2px(Vec(x, 11 * YG)), ronda, Ronda::FREQ_INPUT));
       }
     }
     // setPanelTheme(ronda->panelTheme);
