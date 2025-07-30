@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "RondaEx.hpp"
 #include "plugin.hpp"
 #include "widgets.hpp"
 
@@ -109,7 +110,8 @@ public:
   simd::float_4 getPhase()
   {
     int is_conn;
-    simd::float_4 phase = getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, is_conn, true);
+    simd::float_4 phase =
+      getInputOrParamVal4(PHASE1_INPUT, PHASE1_PARAM, is_conn, true);
     return phase;
   }
 
@@ -174,6 +176,9 @@ Ronda::process(const ProcessArgs& args)
   bool run = isRunning();
   bool reset = isResetting();
   float phsr_fl[4];
+  float clk_fl[4];
+  EDModule* expander = dynamic_cast<EDModule*>(getRightExpander().module);
+  bool is_expander = (expander && (expander->getModel() == modelRondaEx));
 
   if (reset) {
     for (int i = 0; i < PHASORS_LEN; i++) {
@@ -195,7 +200,6 @@ Ronda::process(const ProcessArgs& args)
         clockPulses[i].trigger();
       } else {
         ratio = (double)getFreqRatio(i);
-        // ratio = (double)getParamQuantity(RATE1_PARAM + i)->getDisplayValue();
         phasors[i] += delta * ratio;
         if (phasors[i] >= 1.0) {
           phasors[i] = std::fmod(phasors[i], 1.0);
@@ -210,13 +214,39 @@ Ronda::process(const ProcessArgs& args)
     }
   }
 
-  simd::float_4 phsr_simd = simd::float_4::load(phsr_fl);
-  phsr_simd = simd::fmod(phsr_simd + getPhase(), 1.f) * MAX_VOUT;
+  simd::float_4 clk_simd;
+  for (int i = 0; i < PHASORS_LEN; i++) {
+    clk_fl[i] = (float)clockPulses[i].process(args.sampleTime);
+  }
+  clk_simd = simd::float_4::load(clk_fl) * 10.f;
+  clk_simd.store(clk_fl);
+
+  simd::float_4 phsr_simd =
+    simd::fmod(simd::float_4::load(phsr_fl) + getPhase(), 1.f);
+  if (is_expander) {
+    int conn_mask = 0;
+    simd::float_4 min_v = expander->getInputOrParamVal4(
+      RondaEx::START_INPUT, RondaEx::START_PARAM, conn_mask, true);
+    simd::float_4 max_v = expander->getInputOrParamVal4(
+      RondaEx::END_INPUT, RondaEx::END_PARAM, conn_mask, true);
+    phsr_simd *= max_v - min_v;
+    phsr_simd += min_v;
+    RondaExMessage* msg =
+      (RondaExMessage*)expander->getLeftExpander().producerMessage;
+    msg->phasor = phsr_simd;
+    msg->clock = clk_simd;
+  } else {
+    phsr_simd *= MAX_VOUT;
+  }
+
   phsr_simd.store(phsr_fl);
   for (int i = 0; i < PHASORS_LEN; i++) {
-    clockPulses[i].process(args.sampleTime);
     getOutput(PHSR1_OUTPUT + i).setVoltage(phsr_fl[i]);
-    getOutput(CLK1_OUTPUT + i).setVoltage(clockPulses[i].isHigh() * 10.f);
+    getOutput(CLK1_OUTPUT + i).setVoltage(clk_fl[i]);
+  }
+
+  if (is_expander) {
+    expander->getLeftExpander().requestMessageFlip();
   }
 }
 

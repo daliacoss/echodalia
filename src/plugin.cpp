@@ -113,6 +113,7 @@ init(rack::Plugin* p)
 
   // Add modules here
   p->addModel(modelRonda);
+  p->addModel(modelRondaEx);
   p->addModel(modelJab);
   p->addModel(modelAgate);
 }

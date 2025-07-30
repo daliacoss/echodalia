@@ -231,11 +231,10 @@ Jab::dataFromJson(json_t* root)
 
 struct JabWidget : echodalia::EDModuleWidget
 {
-  static constexpr float XG = 2.54;
-  static constexpr float YG = 2.141666667;
-
   JabWidget(Jab* jab)
   {
+    constexpr float XG = 2.54;
+    constexpr float YG = 2.141666667;
     int i;
     float x = 3 * XG;
     float y;
@@ -244,8 +243,9 @@ struct JabWidget : echodalia::EDModuleWidget
     echodalia::EDPanel* panel = createPanel<echodalia::EDPanel>(
       asset::plugin(pluginInstance, "res/panels/Jab.svg"));
     setPanel(panel);
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(1 * XG, 1.1 * YG))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(5 * XG, 59 * YG))));
+    addChild(createWidget<ScrewBlack>(Vec(0, 0)));
+    addChild(createWidget<ScrewSilver>(
+      Vec(2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - 15)));
 
     addParam(
       createParamCentered<CKD6>(mm2px(Vec(x, 8 * YG)), jab, Jab::GATE_PARAM));
@@ -259,7 +259,6 @@ struct JabWidget : echodalia::EDModuleWidget
       addChild(createLightCentered<SmallLight<RedLight>>(
         mm2px(Vec(XG, y + (2 * YG))), jab, i));
     }
-    // setPanelTheme(jab->panelTheme);
   }
 
   void appendContextMenu(Menu* menu) override

@@ -16,10 +16,15 @@
     {
       "slug": "Ronda",
       "name": "Ronda",
-      "description": "Generate 4 phasors (ramp LFO's) at different frequency ratios, with optional sync and phase offsets",
+      "description": "Generate 4 ramp LFO's at different frequency ratios, with optional sync and phase offsets",
       "tags": ["Low-frequency oscillator", "Quad"]
     },
     {
+      "slug": "RondaEx",
+      "name": "RondaEx",
+      "description": "Add attenuverters and polyphonic outputs to Ronda",
+      "tags": ["Expander"]
+    },    {
       "slug": "Jab",
       "name": "Jab",
       "description": "A gate inverter, gate-to-trigger, and gate-to-latch with a momentary pushbutton",
