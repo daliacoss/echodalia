@@ -158,11 +158,11 @@ DotMatrixGridDisplay::draw(const DrawArgs& args)
 }
 
 void
-DotMatrixGridDisplay::setBoxSizeInDots(float w, float h) {
+DotMatrixGridDisplay::setBoxSizeInDots(float w, float h)
+{
   box.size.x = w * dotSize.x;
   box.size.y = h * dotSize.y;
 }
-
 
 void
 DotMatrixGridDisplay::onButton(const ButtonEvent& e)
@@ -185,9 +185,8 @@ void
 DotMatrixGridDisplay::onDragHover(const DragHoverEvent& e)
 {
   OpaqueWidget::onDragHover(e);
-  if (e.button == GLFW_MOUSE_BUTTON_LEFT &&
+  if (e.origin == this && e.button == GLFW_MOUSE_BUTTON_LEFT &&
       (e.mouseDelta.x || e.mouseDelta.y)) {
-
     std::vector<int> cell_coords = pxToCellCoords(e.pos);
     if (dragHoverCallback) {
       if (cell_coords.size() == 2) {

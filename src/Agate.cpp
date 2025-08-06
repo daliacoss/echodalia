@@ -40,7 +40,7 @@ public:
     TWO_CHANNELS,
     FOUR_CHANNELS
   };
-  uint8_t patterns[PATTERNS_LEN];
+  uint8_t patterns[PATTERNS_LEN] = {0, 0, 0, 0};
   PatternMode patternMode;
   bool isMuteWhenZero = true;
 
